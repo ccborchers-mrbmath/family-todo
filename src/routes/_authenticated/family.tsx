@@ -1,11 +1,12 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
-import { Mail, Trash2, UserPlus, CheckCircle2, Clock } from "lucide-react";
+import { Mail, Trash2, UserPlus, CheckCircle2, Clock, FlaskConical, Copy } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { listFamilyData, inviteKid, deleteInvite, getMe } from "@/lib/family.functions";
+import { createTestKids } from "@/lib/test-accounts.functions";
 import { toast } from "sonner";
 
 export const Route = createFileRoute("/_authenticated/family")({
@@ -33,6 +34,17 @@ function FamilyPage() {
   const del = useMutation({
     mutationFn: (id: string) => deleteInvite({ data: { id } }),
     onSuccess: () => qc.invalidateQueries({ queryKey: ["family"] }),
+  });
+
+  const [testCreds, setTestCreds] = useState<{ name: string; email: string; password: string }[] | null>(null);
+  const makeTestKids = useMutation({
+    mutationFn: () => createTestKids(),
+    onSuccess: (res) => {
+      setTestCreds(res.kids);
+      toast.success("Two test kid accounts created.");
+      qc.invalidateQueries({ queryKey: ["family"] });
+    },
+    onError: (e) => toast.error((e as Error).message),
   });
 
   const isParent = me?.role === "parent";
@@ -125,6 +137,51 @@ function FamilyPage() {
                 </div>
               ))}
             </div>
+          </section>
+
+          <section className="rounded-3xl border border-dashed border-accent/40 bg-accent/5 p-5 space-y-3">
+            <div className="flex items-center gap-2 font-display font-bold">
+              <FlaskConical className="h-5 w-5 text-accent" /> Test child accounts
+            </div>
+            <p className="text-xs text-muted-foreground">
+              Creates two ready-to-use kid accounts linked to your family. Sign in as them in a separate browser or incognito window via the "Use test account" link on the sign-in page to see the kid experience in real time.
+            </p>
+            <Button
+              onClick={() => makeTestKids.mutate()}
+              disabled={makeTestKids.isPending}
+              className="bg-gradient-cool text-primary-foreground border-0"
+            >
+              {makeTestKids.isPending ? "Creating…" : "Create two test kids"}
+            </Button>
+
+            {testCreds && (
+              <div className="mt-3 space-y-2">
+                <div className="text-xs font-semibold uppercase tracking-wider text-accent">
+                  Save these now — passwords are not shown again
+                </div>
+                {testCreds.map((c) => {
+                  const line = `${c.email} / ${c.password}`;
+                  return (
+                    <div key={c.email} className="rounded-xl border border-border/60 bg-card p-3 text-sm">
+                      <div className="font-semibold">{c.name}</div>
+                      <div className="font-mono text-xs break-all mt-1">{c.email}</div>
+                      <div className="font-mono text-xs break-all">pw: {c.password}</div>
+                      <Button
+                        size="sm"
+                        variant="ghost"
+                        className="mt-1 h-7 px-2 text-xs"
+                        onClick={() => {
+                          navigator.clipboard.writeText(line);
+                          toast.success("Copied");
+                        }}
+                      >
+                        <Copy className="h-3 w-3 mr-1" /> Copy
+                      </Button>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
           </section>
         </>
       )}
