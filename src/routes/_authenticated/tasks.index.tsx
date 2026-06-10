@@ -7,7 +7,7 @@ import { listFamilyData, getMe } from "@/lib/family.functions";
 import { describeRecurrence, type RecurrenceConfig, type RecurrenceType } from "@/lib/recurrence";
 import { toast } from "sonner";
 
-export const Route = createFileRoute("/_authenticated/tasks")({
+export const Route = createFileRoute("/_authenticated/tasks/")({
   head: () => ({ meta: [{ title: "Tasks · Kinquest" }] }),
   component: TasksPage,
 });
