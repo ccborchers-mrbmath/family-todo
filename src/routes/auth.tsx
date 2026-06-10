@@ -2,6 +2,8 @@ import { createFileRoute, useRouter, Link } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import { Sparkles } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import { lovable } from "@/integrations/lovable";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
@@ -17,6 +19,9 @@ export const Route = createFileRoute("/auth")({
 function AuthPage() {
   const router = useRouter();
   const [loading, setLoading] = useState(false);
+  const [showEmail, setShowEmail] = useState(false);
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data }) => {
@@ -35,6 +40,18 @@ function AuthPage() {
       return;
     }
     if (result.redirected) return;
+    router.navigate({ to: "/dashboard", replace: true });
+  }
+
+  async function signInEmail(e: React.FormEvent) {
+    e.preventDefault();
+    setLoading(true);
+    const { error } = await supabase.auth.signInWithPassword({ email, password });
+    if (error) {
+      toast.error(error.message);
+      setLoading(false);
+      return;
+    }
     router.navigate({ to: "/dashboard", replace: true });
   }
 
@@ -59,6 +76,32 @@ function AuthPage() {
         >
           {loading ? "Opening Google…" : "Continue with Google"}
         </Button>
+
+        <div className="mt-6 text-center">
+          <button
+            type="button"
+            onClick={() => setShowEmail((v) => !v)}
+            className="text-xs text-muted-foreground underline underline-offset-4 hover:text-foreground"
+          >
+            {showEmail ? "Hide test sign-in" : "Use test account (email + password)"}
+          </button>
+        </div>
+
+        {showEmail && (
+          <form onSubmit={signInEmail} className="mt-4 space-y-3">
+            <div>
+              <Label htmlFor="em" className="text-xs">Email</Label>
+              <Input id="em" type="email" value={email} onChange={(e) => setEmail(e.target.value)} autoComplete="email" />
+            </div>
+            <div>
+              <Label htmlFor="pw" className="text-xs">Password</Label>
+              <Input id="pw" type="password" value={password} onChange={(e) => setPassword(e.target.value)} autoComplete="current-password" />
+            </div>
+            <Button type="submit" disabled={loading || !email || !password} variant="outline" className="w-full">
+              Sign in
+            </Button>
+          </form>
+        )}
       </div>
     </div>
   );
