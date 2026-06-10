@@ -61,8 +61,13 @@ function TasksPage() {
                 </span>
               </div>
               {t.description && <div className="text-sm text-muted-foreground mt-1">{t.description}</div>}
-              <div className="text-xs text-accent mt-2 font-medium">
-                {describeRecurrence(t.recurrence_type as RecurrenceType, (t.recurrence_config as RecurrenceConfig) ?? {})}
+              <div className="text-xs text-accent mt-2 font-medium flex items-center gap-2 flex-wrap">
+                <span>{describeRecurrence(t.recurrence_type as RecurrenceType, (t.recurrence_config as RecurrenceConfig) ?? {})}</span>
+                {Number(t.reward_amount) > 0 && (
+                  <span className="px-2 py-0.5 rounded-full bg-gradient-energy text-primary-foreground text-[10px] font-bold">
+                    R{Number(t.reward_amount).toFixed(2)} reward
+                  </span>
+                )}
               </div>
             </div>
             {isParent && (
