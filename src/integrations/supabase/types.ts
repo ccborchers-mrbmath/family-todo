@@ -14,16 +14,252 @@ export type Database = {
   }
   public: {
     Tables: {
-      [_ in never]: never
+      families: {
+        Row: {
+          created_at: string
+          created_by: string
+          id: string
+          name: string
+        }
+        Insert: {
+          created_at?: string
+          created_by: string
+          id?: string
+          name: string
+        }
+        Update: {
+          created_at?: string
+          created_by?: string
+          id?: string
+          name?: string
+        }
+        Relationships: []
+      }
+      family_invites: {
+        Row: {
+          claimed_at: string | null
+          claimed_by: string | null
+          created_at: string
+          display_name: string
+          email: string
+          family_id: string
+          id: string
+          role: Database["public"]["Enums"]["app_role"]
+        }
+        Insert: {
+          claimed_at?: string | null
+          claimed_by?: string | null
+          created_at?: string
+          display_name: string
+          email: string
+          family_id: string
+          id?: string
+          role?: Database["public"]["Enums"]["app_role"]
+        }
+        Update: {
+          claimed_at?: string | null
+          claimed_by?: string | null
+          created_at?: string
+          display_name?: string
+          email?: string
+          family_id?: string
+          id?: string
+          role?: Database["public"]["Enums"]["app_role"]
+        }
+        Relationships: [
+          {
+            foreignKeyName: "family_invites_family_id_fkey"
+            columns: ["family_id"]
+            isOneToOne: false
+            referencedRelation: "families"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      profiles: {
+        Row: {
+          avatar_url: string | null
+          created_at: string
+          display_name: string
+          email: string | null
+          family_id: string | null
+          id: string
+        }
+        Insert: {
+          avatar_url?: string | null
+          created_at?: string
+          display_name: string
+          email?: string | null
+          family_id?: string | null
+          id: string
+        }
+        Update: {
+          avatar_url?: string | null
+          created_at?: string
+          display_name?: string
+          email?: string | null
+          family_id?: string | null
+          id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "profiles_family_id_fkey"
+            columns: ["family_id"]
+            isOneToOne: false
+            referencedRelation: "families"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      task_instances: {
+        Row: {
+          assignee_id: string
+          completed_at: string | null
+          created_at: string
+          due_date: string
+          family_id: string
+          id: string
+          reject_note: string | null
+          status: Database["public"]["Enums"]["instance_status"]
+          task_id: string
+          verified_at: string | null
+          verifier_id: string | null
+        }
+        Insert: {
+          assignee_id: string
+          completed_at?: string | null
+          created_at?: string
+          due_date: string
+          family_id: string
+          id?: string
+          reject_note?: string | null
+          status?: Database["public"]["Enums"]["instance_status"]
+          task_id: string
+          verified_at?: string | null
+          verifier_id?: string | null
+        }
+        Update: {
+          assignee_id?: string
+          completed_at?: string | null
+          created_at?: string
+          due_date?: string
+          family_id?: string
+          id?: string
+          reject_note?: string | null
+          status?: Database["public"]["Enums"]["instance_status"]
+          task_id?: string
+          verified_at?: string | null
+          verifier_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "task_instances_family_id_fkey"
+            columns: ["family_id"]
+            isOneToOne: false
+            referencedRelation: "families"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "task_instances_task_id_fkey"
+            columns: ["task_id"]
+            isOneToOne: false
+            referencedRelation: "tasks"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      tasks: {
+        Row: {
+          active: boolean
+          assignee_id: string
+          created_at: string
+          created_by: string
+          description: string | null
+          end_date: string | null
+          family_id: string
+          id: string
+          recurrence_config: Json
+          recurrence_type: Database["public"]["Enums"]["recurrence_type"]
+          start_date: string
+          title: string
+          updated_at: string
+        }
+        Insert: {
+          active?: boolean
+          assignee_id: string
+          created_at?: string
+          created_by: string
+          description?: string | null
+          end_date?: string | null
+          family_id: string
+          id?: string
+          recurrence_config?: Json
+          recurrence_type?: Database["public"]["Enums"]["recurrence_type"]
+          start_date?: string
+          title: string
+          updated_at?: string
+        }
+        Update: {
+          active?: boolean
+          assignee_id?: string
+          created_at?: string
+          created_by?: string
+          description?: string | null
+          end_date?: string | null
+          family_id?: string
+          id?: string
+          recurrence_config?: Json
+          recurrence_type?: Database["public"]["Enums"]["recurrence_type"]
+          start_date?: string
+          title?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "tasks_family_id_fkey"
+            columns: ["family_id"]
+            isOneToOne: false
+            referencedRelation: "families"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      user_roles: {
+        Row: {
+          id: string
+          role: Database["public"]["Enums"]["app_role"]
+          user_id: string
+        }
+        Insert: {
+          id?: string
+          role: Database["public"]["Enums"]["app_role"]
+          user_id: string
+        }
+        Update: {
+          id?: string
+          role?: Database["public"]["Enums"]["app_role"]
+          user_id?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      get_my_family_id: { Args: never; Returns: string }
+      has_role: {
+        Args: {
+          _role: Database["public"]["Enums"]["app_role"]
+          _user_id: string
+        }
+        Returns: boolean
+      }
     }
     Enums: {
-      [_ in never]: never
+      app_role: "parent" | "kid"
+      instance_status: "pending" | "submitted" | "approved" | "rejected"
+      recurrence_type: "once" | "daily" | "weekly" | "monthly" | "custom"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -150,6 +386,10 @@ export type CompositeTypes<
 
 export const Constants = {
   public: {
-    Enums: {},
+    Enums: {
+      app_role: ["parent", "kid"],
+      instance_status: ["pending", "submitted", "approved", "rejected"],
+      recurrence_type: ["once", "daily", "weekly", "monthly", "custom"],
+    },
   },
 } as const
