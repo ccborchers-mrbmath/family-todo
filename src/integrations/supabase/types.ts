@@ -14,6 +14,75 @@ export type Database = {
   }
   public: {
     Tables: {
+      account_transactions: {
+        Row: {
+          amount: number
+          child_id: string
+          created_at: string
+          created_by: string
+          family_id: string
+          id: string
+          note: string | null
+          occurred_on: string
+          recurring_id: string | null
+          reviewed_at: string | null
+          reviewed_by: string | null
+          source: Database["public"]["Enums"]["txn_source"]
+          status: Database["public"]["Enums"]["txn_status"]
+          task_instance_id: string | null
+          type: Database["public"]["Enums"]["txn_type"]
+        }
+        Insert: {
+          amount: number
+          child_id: string
+          created_at?: string
+          created_by: string
+          family_id: string
+          id?: string
+          note?: string | null
+          occurred_on?: string
+          recurring_id?: string | null
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          source?: Database["public"]["Enums"]["txn_source"]
+          status?: Database["public"]["Enums"]["txn_status"]
+          task_instance_id?: string | null
+          type: Database["public"]["Enums"]["txn_type"]
+        }
+        Update: {
+          amount?: number
+          child_id?: string
+          created_at?: string
+          created_by?: string
+          family_id?: string
+          id?: string
+          note?: string | null
+          occurred_on?: string
+          recurring_id?: string | null
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          source?: Database["public"]["Enums"]["txn_source"]
+          status?: Database["public"]["Enums"]["txn_status"]
+          task_instance_id?: string | null
+          type?: Database["public"]["Enums"]["txn_type"]
+        }
+        Relationships: [
+          {
+            foreignKeyName: "account_transactions_family_id_fkey"
+            columns: ["family_id"]
+            isOneToOne: false
+            referencedRelation: "families"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "account_transactions_task_instance_id_fkey"
+            columns: ["task_instance_id"]
+            isOneToOne: false
+            referencedRelation: "task_instances"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       families: {
         Row: {
           created_at: string
@@ -111,6 +180,65 @@ export type Database = {
           },
         ]
       }
+      recurring_pocket_money: {
+        Row: {
+          active: boolean
+          amount: number
+          child_id: string
+          created_at: string
+          created_by: string
+          day_of_month: number | null
+          day_of_week: number | null
+          end_date: string | null
+          family_id: string
+          id: string
+          last_run_on: string | null
+          note: string | null
+          recurrence: Database["public"]["Enums"]["pm_recurrence"]
+          start_date: string
+        }
+        Insert: {
+          active?: boolean
+          amount: number
+          child_id: string
+          created_at?: string
+          created_by: string
+          day_of_month?: number | null
+          day_of_week?: number | null
+          end_date?: string | null
+          family_id: string
+          id?: string
+          last_run_on?: string | null
+          note?: string | null
+          recurrence: Database["public"]["Enums"]["pm_recurrence"]
+          start_date?: string
+        }
+        Update: {
+          active?: boolean
+          amount?: number
+          child_id?: string
+          created_at?: string
+          created_by?: string
+          day_of_month?: number | null
+          day_of_week?: number | null
+          end_date?: string | null
+          family_id?: string
+          id?: string
+          last_run_on?: string | null
+          note?: string | null
+          recurrence?: Database["public"]["Enums"]["pm_recurrence"]
+          start_date?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "recurring_pocket_money_family_id_fkey"
+            columns: ["family_id"]
+            isOneToOne: false
+            referencedRelation: "families"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       task_instances: {
         Row: {
           assignee_id: string
@@ -180,6 +308,7 @@ export type Database = {
           id: string
           recurrence_config: Json
           recurrence_type: Database["public"]["Enums"]["recurrence_type"]
+          reward_amount: number
           start_date: string
           title: string
           updated_at: string
@@ -195,6 +324,7 @@ export type Database = {
           id?: string
           recurrence_config?: Json
           recurrence_type?: Database["public"]["Enums"]["recurrence_type"]
+          reward_amount?: number
           start_date?: string
           title: string
           updated_at?: string
@@ -210,6 +340,7 @@ export type Database = {
           id?: string
           recurrence_config?: Json
           recurrence_type?: Database["public"]["Enums"]["recurrence_type"]
+          reward_amount?: number
           start_date?: string
           title?: string
           updated_at?: string
@@ -259,7 +390,11 @@ export type Database = {
     Enums: {
       app_role: "parent" | "kid"
       instance_status: "pending" | "submitted" | "approved" | "rejected"
+      pm_recurrence: "weekly" | "monthly"
       recurrence_type: "once" | "daily" | "weekly" | "monthly" | "custom"
+      txn_source: "manual" | "task_reward" | "recurring" | "request"
+      txn_status: "pending" | "approved" | "rejected"
+      txn_type: "income" | "expense"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -389,7 +524,11 @@ export const Constants = {
     Enums: {
       app_role: ["parent", "kid"],
       instance_status: ["pending", "submitted", "approved", "rejected"],
+      pm_recurrence: ["weekly", "monthly"],
       recurrence_type: ["once", "daily", "weekly", "monthly", "custom"],
+      txn_source: ["manual", "task_reward", "recurring", "request"],
+      txn_status: ["pending", "approved", "rejected"],
+      txn_type: ["income", "expense"],
     },
   },
 } as const
