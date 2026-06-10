@@ -30,6 +30,7 @@ function NewTask() {
   const [rConfig, setRConfig] = useState<RecurrenceConfig>({});
   const [startDate, setStartDate] = useState(new Date().toISOString().slice(0, 10));
   const [endDate, setEndDate] = useState("");
+  const [rewardAmount, setRewardAmount] = useState<string>("");
 
   const mut = useMutation({
     mutationFn: () =>
@@ -42,6 +43,7 @@ function NewTask() {
           recurrenceConfig: rConfig,
           startDate,
           endDate: endDate || null,
+          rewardAmount: rewardAmount ? Number(rewardAmount) : 0,
         },
       }),
     onSuccess: async () => {
@@ -103,6 +105,23 @@ function NewTask() {
             <Label htmlFor="end">Ends (optional)</Label>
             <Input id="end" type="date" value={endDate} onChange={(e) => setEndDate(e.target.value)} />
           </div>
+        </div>
+
+        <div>
+          <Label htmlFor="reward">Reward (R) — optional</Label>
+          <Input
+            id="reward"
+            type="number"
+            inputMode="decimal"
+            min={0}
+            step="0.01"
+            value={rewardAmount}
+            onChange={(e) => setRewardAmount(e.target.value)}
+            placeholder="0.00"
+          />
+          <p className="text-xs text-muted-foreground mt-1">
+            Paid to the kid's account when you verify each completion.
+          </p>
         </div>
 
         <div className="flex gap-2 pt-2">
