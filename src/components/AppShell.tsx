@@ -1,5 +1,5 @@
 import { Link, useRouter } from "@tanstack/react-router";
-import { Sparkles, LayoutDashboard, ListChecks, Users, ShieldCheck, LogOut } from "lucide-react";
+import { Sparkles, LayoutDashboard, ListChecks, Users, ShieldCheck, LogOut, Wallet } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import type { ReactNode } from "react";
@@ -19,9 +19,13 @@ export function AppShell({ children, role, displayName }: Props) {
         { to: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
         { to: "/tasks", label: "Tasks", icon: ListChecks },
         { to: "/verify", label: "Verify", icon: ShieldCheck },
+        { to: "/accounts", label: "Money", icon: Wallet },
         { to: "/family", label: "Family", icon: Users },
       ]
-    : [{ to: "/dashboard", label: "My Tasks", icon: LayoutDashboard }];
+    : [
+        { to: "/dashboard", label: "My Tasks", icon: LayoutDashboard },
+        { to: "/my-account", label: "Money", icon: Wallet },
+      ];
 
   async function signOut() {
     await supabase.auth.signOut();

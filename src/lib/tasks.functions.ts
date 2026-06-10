@@ -17,6 +17,7 @@ const createTaskSchema = z.object({
   recurrenceConfig: recurrenceConfigSchema.default({}),
   startDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
   endDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).optional().nullable(),
+  rewardAmount: z.number().min(0).max(1_000_000).default(0),
 });
 
 export const createTask = createServerFn({ method: "POST" })
@@ -41,6 +42,7 @@ export const createTask = createServerFn({ method: "POST" })
       recurrence_config: data.recurrenceConfig as never,
       start_date: data.startDate,
       end_date: data.endDate ?? null,
+      reward_amount: data.rewardAmount ?? 0,
     });
     if (error) throw new Error(error.message);
     return { ok: true };
@@ -51,7 +53,7 @@ export const listTasks = createServerFn({ method: "GET" })
   .handler(async ({ context }) => {
     const { data, error } = await context.supabase
       .from("tasks")
-      .select("id, title, description, assignee_id, recurrence_type, recurrence_config, start_date, end_date, active, created_at")
+      .select("id, title, description, assignee_id, recurrence_type, recurrence_config, start_date, end_date, active, reward_amount, created_at")
       .order("created_at", { ascending: false });
     if (error) throw new Error(error.message);
     return data ?? [];
