@@ -134,7 +134,7 @@ export const listInstances = createServerFn({ method: "POST" })
     let iq = supabase
       .from("task_instances")
       .select(
-        "id, task_id, assignee_id, due_date, status, completed_at, verified_at, reject_note, tasks(title, description, recurrence_type, recurrence_config)",
+        "id, task_id, assignee_id, due_date, status, completed_at, verified_at, reject_note, reward_override, tasks(title, description, recurrence_type, recurrence_config, reward_amount)",
       )
       .gte("due_date", data.from)
       .lte("due_date", data.to)
