@@ -103,8 +103,12 @@ function VerifyPage() {
                 size="sm"
                 variant="secondary"
                 onClick={() => {
-                  setRejecting(i.id);
+                  const defaultReward = Number(
+                    (i.tasks as { reward_amount?: number | string } | null)?.reward_amount ?? 0,
+                  );
+                  setRejecting({ id: i.id, defaultReward });
                   setNote("");
+                  setRewardStr(defaultReward > 0 ? String(defaultReward) : "");
                 }}
               >
                 <X className="h-4 w-4" /> Send back
@@ -126,13 +130,39 @@ function VerifyPage() {
             onChange={(e) => setNote(e.target.value)}
             rows={3}
           />
+          <div className="space-y-1.5">
+            <Label htmlFor="reward-override">Reward on retry (R)</Label>
+            <Input
+              id="reward-override"
+              type="number"
+              min={0}
+              step="0.01"
+              inputMode="decimal"
+              placeholder="0.00"
+              value={rewardStr}
+              onChange={(e) => setRewardStr(e.target.value)}
+            />
+            <p className="text-xs text-muted-foreground">
+              Leave as-is to keep the original reward, or change it for this attempt.
+            </p>
+          </div>
           <DialogFooter>
             <Button variant="ghost" onClick={() => setRejecting(null)}>Cancel</Button>
             <Button
               variant="destructive"
               onClick={() => {
                 if (rejecting) {
-                  verify.mutate({ id: rejecting, approve: false, note: note.trim() || undefined });
+                  const parsed = rewardStr.trim() === "" ? null : Number(rewardStr);
+                  const rewardOverride =
+                    parsed === null || Number.isNaN(parsed) || parsed === rejecting.defaultReward
+                      ? null
+                      : parsed;
+                  verify.mutate({
+                    id: rejecting.id,
+                    approve: false,
+                    note: note.trim() || undefined,
+                    rewardOverride,
+                  });
                   setRejecting(null);
                 }
               }}
