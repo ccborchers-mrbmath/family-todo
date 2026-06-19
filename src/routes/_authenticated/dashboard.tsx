@@ -34,7 +34,12 @@ function Dashboard() {
 function KidDash() {
   const qc = useQueryClient();
   const [celebrate, setCelebrate] = useState(false);
-  const from = todayISO();
+  const today = todayISO();
+  const from = (() => {
+    const d = new Date();
+    d.setDate(d.getDate() - 14);
+    return d.toISOString().slice(0, 10);
+  })();
   const to = weekFromTodayISO();
 
   const { data: instances = [] } = useQuery({
