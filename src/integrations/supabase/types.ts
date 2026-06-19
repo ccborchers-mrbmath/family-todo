@@ -248,6 +248,7 @@ export type Database = {
           family_id: string
           id: string
           reject_note: string | null
+          reward_override: number | null
           status: Database["public"]["Enums"]["instance_status"]
           task_id: string
           verified_at: string | null
@@ -261,6 +262,7 @@ export type Database = {
           family_id: string
           id?: string
           reject_note?: string | null
+          reward_override?: number | null
           status?: Database["public"]["Enums"]["instance_status"]
           task_id: string
           verified_at?: string | null
@@ -274,6 +276,7 @@ export type Database = {
           family_id?: string
           id?: string
           reject_note?: string | null
+          reward_override?: number | null
           status?: Database["public"]["Enums"]["instance_status"]
           task_id?: string
           verified_at?: string | null
