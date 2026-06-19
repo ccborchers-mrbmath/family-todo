@@ -149,3 +149,58 @@ export const deleteInvite = createServerFn({ method: "POST" })
     if (error) throw new Error(error.message);
     return { ok: true };
   });
+
+export const removeKid = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d: unknown) => idSchema.parse(d))
+  .handler(async ({ data, context }) => {
+    const { supabase, userId } = context;
+    if (data.id === userId) throw new Error("You can't remove yourself.");
+
+    // Caller must be a parent
+    const { data: isParent } = await supabase.rpc("has_role", { _user_id: userId, _role: "parent" });
+    if (!isParent) throw new Error("Only parents can remove members.");
+
+    // Caller's family
+    const { data: me } = await supabase
+      .from("profiles")
+      .select("family_id")
+      .eq("id", userId)
+      .maybeSingle();
+    if (!me?.family_id) throw new Error("No family.");
+
+    // Target must be in the same family
+    const { data: target } = await supabase
+      .from("profiles")
+      .select("id, family_id")
+      .eq("id", data.id)
+      .maybeSingle();
+    if (!target || target.family_id !== me.family_id) {
+      throw new Error("That member isn't in your family.");
+    }
+
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+
+    // Wipe data tied to the kid in this family
+    await supabaseAdmin.from("recurring_pocket_money").delete().eq("child_id", data.id);
+    await supabaseAdmin.from("account_transactions").delete().eq("child_id", data.id);
+    await supabaseAdmin.from("task_instances").delete().eq("assignee_id", data.id);
+    await supabaseAdmin.from("tasks").delete().eq("assignee_id", data.id);
+    await supabaseAdmin.from("user_roles").delete().eq("user_id", data.id);
+
+    // Free any invite for this email so they can be re-invited cleanly
+    await supabaseAdmin
+      .from("family_invites")
+      .delete()
+      .eq("family_id", me.family_id)
+      .eq("claimed_by", data.id);
+
+    // Unlink from family
+    const { error: upErr } = await supabaseAdmin
+      .from("profiles")
+      .update({ family_id: null })
+      .eq("id", data.id);
+    if (upErr) throw new Error(upErr.message);
+
+    return { ok: true };
+  });
