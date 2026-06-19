@@ -50,8 +50,8 @@ function VerifyPage() {
   const submitted = instances.filter((i) => i.status === "submitted");
 
   const verify = useMutation({
-    mutationFn: (v: { id: string; approve: boolean; note?: string }) =>
-      verifyInstance({ data: { id: v.id, approve: v.approve, note: v.note ?? null } }),
+    mutationFn: (v: { id: string; approve: boolean; note?: string; rewardOverride?: number | null }) =>
+      verifyInstance({ data: { id: v.id, approve: v.approve, note: v.note ?? null, rewardOverride: v.rewardOverride ?? null } }),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["instances"] });
       toast.success("Saved");
@@ -59,8 +59,9 @@ function VerifyPage() {
     onError: (e) => toast.error((e as Error).message),
   });
 
-  const [rejecting, setRejecting] = useState<string | null>(null);
+  const [rejecting, setRejecting] = useState<{ id: string; defaultReward: number } | null>(null);
   const [note, setNote] = useState("");
+  const [rewardStr, setRewardStr] = useState("");
 
   return (
     <div className="space-y-6 max-w-2xl">
