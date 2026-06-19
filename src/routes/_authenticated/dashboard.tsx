@@ -141,10 +141,10 @@ function KidDash() {
       )}
 
       <div className="grid gap-3">
-        {today.length === 0 && (
+        {todayList.length === 0 && (
           <EmptyState text="Nothing due today. Enjoy the breather." />
         )}
-        {today.map((i) => (
+        {todayList.map((i) => (
           <KidTaskCard key={i.id} instance={i} onComplete={() => submit.mutate(i.id)} />
         ))}
       </div>
