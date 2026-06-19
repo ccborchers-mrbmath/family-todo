@@ -134,7 +134,7 @@ export const listInstances = createServerFn({ method: "POST" })
     let iq = supabase
       .from("task_instances")
       .select(
-        "id, task_id, assignee_id, due_date, status, completed_at, verified_at, reject_note, tasks(title, description, recurrence_type, recurrence_config)",
+        "id, task_id, assignee_id, due_date, status, completed_at, verified_at, reject_note, reward_override, tasks(title, description, recurrence_type, recurrence_config, reward_amount)",
       )
       .gte("due_date", data.from)
       .lte("due_date", data.to)
@@ -164,6 +164,7 @@ const verifySchema = z.object({
   id: z.string().uuid(),
   approve: z.boolean(),
   note: z.string().trim().max(300).optional().nullable(),
+  rewardOverride: z.number().min(0).max(1_000_000).optional().nullable(),
 });
 
 export const verifyInstance = createServerFn({ method: "POST" })
@@ -171,14 +172,18 @@ export const verifyInstance = createServerFn({ method: "POST" })
   .inputValidator((d: unknown) => verifySchema.parse(d))
   .handler(async ({ data, context }) => {
     const { supabase, userId } = context;
+    const update: Record<string, unknown> = {
+      status: data.approve ? "approved" : "rejected",
+      verified_at: new Date().toISOString(),
+      verifier_id: userId,
+      reject_note: data.approve ? null : data.note ?? null,
+    };
+    if (!data.approve && data.rewardOverride !== undefined && data.rewardOverride !== null) {
+      update.reward_override = data.rewardOverride;
+    }
     const { error } = await supabase
       .from("task_instances")
-      .update({
-        status: data.approve ? "approved" : "rejected",
-        verified_at: new Date().toISOString(),
-        verifier_id: userId,
-        reject_note: data.approve ? null : data.note ?? null,
-      })
+      .update(update as never)
       .eq("id", data.id);
     if (error) throw new Error(error.message);
     return { ok: true };
