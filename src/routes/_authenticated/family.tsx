@@ -36,6 +36,16 @@ function FamilyPage() {
     onSuccess: () => qc.invalidateQueries({ queryKey: ["family"] }),
   });
 
+  const remove = useMutation({
+    mutationFn: (id: string) => removeKid({ data: { id } }),
+    onSuccess: () => {
+      toast.success("Removed from family.");
+      qc.invalidateQueries({ queryKey: ["family"] });
+      qc.invalidateQueries({ queryKey: ["instances"] });
+    },
+    onError: (e) => toast.error((e as Error).message),
+  });
+
   const [testCreds, setTestCreds] = useState<{ name: string; email: string; password: string }[] | null>(null);
   const makeTestKids = useMutation({
     mutationFn: () => createTestKids(),
