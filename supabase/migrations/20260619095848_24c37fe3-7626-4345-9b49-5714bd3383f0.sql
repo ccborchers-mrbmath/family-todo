@@ -1,0 +1,1 @@
+CREATE UNIQUE INDEX IF NOT EXISTS account_transactions_task_instance_unique ON public.account_transactions(task_instance_id) WHERE task_instance_id IS NOT NULL;
