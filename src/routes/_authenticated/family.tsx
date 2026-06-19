@@ -46,6 +46,18 @@ function FamilyPage() {
     onError: (e) => toast.error((e as Error).message),
   });
 
+  const reset = useMutation({
+    mutationFn: (id: string) => resetKid({ data: { id } }),
+    onSuccess: () => {
+      toast.success("Fresh start — tasks and rewards cleared.");
+      qc.invalidateQueries({ queryKey: ["family"] });
+      qc.invalidateQueries({ queryKey: ["instances"] });
+      qc.invalidateQueries({ queryKey: ["tasks"] });
+      qc.invalidateQueries({ queryKey: ["account"] });
+    },
+    onError: (e) => toast.error((e as Error).message),
+  });
+
   const [testCreds, setTestCreds] = useState<{ name: string; email: string; password: string }[] | null>(null);
   const makeTestKids = useMutation({
     mutationFn: () => createTestKids(),
