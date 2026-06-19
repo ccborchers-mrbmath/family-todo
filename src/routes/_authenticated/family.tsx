@@ -1,11 +1,11 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
-import { Mail, Trash2, UserPlus, CheckCircle2, Clock, FlaskConical, Copy } from "lucide-react";
+import { Mail, Trash2, UserPlus, CheckCircle2, Clock, FlaskConical, Copy, RotateCcw } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { listFamilyData, inviteKid, deleteInvite, getMe, removeKid } from "@/lib/family.functions";
+import { listFamilyData, inviteKid, deleteInvite, getMe, removeKid, resetKid } from "@/lib/family.functions";
 import { createTestKids } from "@/lib/test-accounts.functions";
 import { toast } from "sonner";
 
