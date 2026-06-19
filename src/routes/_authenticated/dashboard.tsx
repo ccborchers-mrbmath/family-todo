@@ -92,7 +92,7 @@ function KidDash() {
       <div>
         <h1 className="text-3xl font-display font-bold tracking-tight">Today</h1>
         <p className="text-muted-foreground text-sm mt-1">
-          {today.length} task{today.length === 1 ? "" : "s"} to crush
+          {todayList.length} task{todayList.length === 1 ? "" : "s"} to crush
         </p>
       </div>
 
