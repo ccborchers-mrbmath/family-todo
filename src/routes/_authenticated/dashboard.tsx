@@ -81,8 +81,8 @@ function KidDash() {
     onSettled: () => qc.invalidateQueries({ queryKey: ["instances"] }),
   });
 
-  const today = useMemo(() => instances.filter((i) => i.due_date === from), [instances, from]);
-  const upcoming = useMemo(() => instances.filter((i) => i.due_date > from), [instances, from]);
+  const todayList = useMemo(() => instances.filter((i) => i.due_date === today), [instances, today]);
+  const upcoming = useMemo(() => instances.filter((i) => i.due_date > today), [instances, today]);
   const rejected = useMemo(() => instances.filter((i) => i.status === "rejected"), [instances]);
 
   return (
