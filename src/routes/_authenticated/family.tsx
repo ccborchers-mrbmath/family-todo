@@ -5,7 +5,7 @@ import { Mail, Trash2, UserPlus, CheckCircle2, Clock, FlaskConical, Copy } from 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { listFamilyData, inviteKid, deleteInvite, getMe } from "@/lib/family.functions";
+import { listFamilyData, inviteKid, deleteInvite, getMe, removeKid } from "@/lib/family.functions";
 import { createTestKids } from "@/lib/test-accounts.functions";
 import { toast } from "sonner";
 
