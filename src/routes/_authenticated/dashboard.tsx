@@ -34,7 +34,12 @@ function Dashboard() {
 function KidDash() {
   const qc = useQueryClient();
   const [celebrate, setCelebrate] = useState(false);
-  const from = todayISO();
+  const today = todayISO();
+  const from = (() => {
+    const d = new Date();
+    d.setDate(d.getDate() - 14);
+    return d.toISOString().slice(0, 10);
+  })();
   const to = weekFromTodayISO();
 
   const { data: instances = [] } = useQuery({
@@ -76,8 +81,8 @@ function KidDash() {
     onSettled: () => qc.invalidateQueries({ queryKey: ["instances"] }),
   });
 
-  const today = useMemo(() => instances.filter((i) => i.due_date === from), [instances, from]);
-  const upcoming = useMemo(() => instances.filter((i) => i.due_date > from), [instances, from]);
+  const todayList = useMemo(() => instances.filter((i) => i.due_date === today), [instances, today]);
+  const upcoming = useMemo(() => instances.filter((i) => i.due_date > today), [instances, today]);
   const rejected = useMemo(() => instances.filter((i) => i.status === "rejected"), [instances]);
 
   return (
@@ -87,32 +92,59 @@ function KidDash() {
       <div>
         <h1 className="text-3xl font-display font-bold tracking-tight">Today</h1>
         <p className="text-muted-foreground text-sm mt-1">
-          {today.length} task{today.length === 1 ? "" : "s"} to crush
+          {todayList.length} task{todayList.length === 1 ? "" : "s"} to crush
         </p>
       </div>
 
       {rejected.length > 0 && (
-        <section className="rounded-2xl border border-destructive/40 bg-destructive/10 p-4">
-          <div className="flex items-center gap-2 mb-2">
+        <section className="rounded-2xl border border-destructive/40 bg-destructive/10 p-4 space-y-3">
+          <div className="flex items-center gap-2">
             <X className="h-4 w-4 text-destructive" />
             <span className="font-semibold text-sm">Sent back to redo</span>
           </div>
           <ul className="space-y-2">
-            {rejected.map((i) => (
-              <li key={i.id} className="text-sm">
-                <span className="font-medium">{i.tasks?.title}</span>
-                {i.reject_note && <span className="text-muted-foreground"> — {i.reject_note}</span>}
-              </li>
-            ))}
+            {rejected.map((i) => {
+              const override = i.reward_override != null ? Number(i.reward_override) : null;
+              const original = Number((i.tasks as { reward_amount?: number | string } | null)?.reward_amount ?? 0);
+              const showReward = override ?? original;
+              return (
+                <li key={i.id} className="rounded-xl bg-card/60 border border-border/40 p-3 flex items-start justify-between gap-3">
+                  <div className="min-w-0">
+                    <div className="font-medium text-sm">{i.tasks?.title}</div>
+                    {i.reject_note && (
+                      <div className="text-xs text-muted-foreground mt-0.5">{i.reject_note}</div>
+                    )}
+                    <div className="text-[11px] mt-1 flex items-center gap-2 flex-wrap">
+                      <span className="text-muted-foreground">Due {i.due_date}</span>
+                      {showReward > 0 && (
+                        <span className="px-2 py-0.5 rounded-full bg-gradient-energy text-primary-foreground font-bold">
+                          R{showReward.toFixed(2)}
+                          {override != null && override !== original ? " (updated)" : ""}
+                        </span>
+                      )}
+                    </div>
+                  </div>
+                  <Button
+                    size="sm"
+                    onClick={() => {
+                      submit.mutate(i.id);
+                    }}
+                    className="bg-gradient-energy text-primary-foreground border-0 shadow-pop shrink-0"
+                  >
+                    <Check className="h-4 w-4" /> Redo & submit
+                  </Button>
+                </li>
+              );
+            })}
           </ul>
         </section>
       )}
 
       <div className="grid gap-3">
-        {today.length === 0 && (
+        {todayList.length === 0 && (
           <EmptyState text="Nothing due today. Enjoy the breather." />
         )}
-        {today.map((i) => (
+        {todayList.map((i) => (
           <KidTaskCard key={i.id} instance={i} onComplete={() => submit.mutate(i.id)} />
         ))}
       </div>
