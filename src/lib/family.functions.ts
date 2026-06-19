@@ -149,6 +149,41 @@ export const deleteInvite = createServerFn({ method: "POST" })
     if (error) throw new Error(error.message);
     return { ok: true };
   });
+export const resetKid = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d: unknown) => idSchema.parse(d))
+  .handler(async ({ data, context }) => {
+    const { supabase, userId } = context;
+
+    const { data: isParent } = await supabase.rpc("has_role", { _user_id: userId, _role: "parent" });
+    if (!isParent) throw new Error("Only parents can reset a kid.");
+
+    const { data: me } = await supabase
+      .from("profiles")
+      .select("family_id")
+      .eq("id", userId)
+      .maybeSingle();
+    if (!me?.family_id) throw new Error("No family.");
+
+    const { data: target } = await supabase
+      .from("profiles")
+      .select("id, family_id")
+      .eq("id", data.id)
+      .maybeSingle();
+    if (!target || target.family_id !== me.family_id) {
+      throw new Error("That member isn't in your family.");
+    }
+
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+
+    await supabaseAdmin.from("recurring_pocket_money").delete().eq("child_id", data.id);
+    await supabaseAdmin.from("account_transactions").delete().eq("child_id", data.id);
+    await supabaseAdmin.from("task_instances").delete().eq("assignee_id", data.id);
+    await supabaseAdmin.from("tasks").delete().eq("assignee_id", data.id);
+
+    return { ok: true };
+  });
+
 
 export const removeKid = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
