@@ -5,7 +5,7 @@ import { Mail, Trash2, UserPlus, CheckCircle2, Clock, FlaskConical, Copy } from 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { listFamilyData, inviteKid, deleteInvite, getMe } from "@/lib/family.functions";
+import { listFamilyData, inviteKid, deleteInvite, getMe, removeKid } from "@/lib/family.functions";
 import { createTestKids } from "@/lib/test-accounts.functions";
 import { toast } from "sonner";
 
@@ -34,6 +34,16 @@ function FamilyPage() {
   const del = useMutation({
     mutationFn: (id: string) => deleteInvite({ data: { id } }),
     onSuccess: () => qc.invalidateQueries({ queryKey: ["family"] }),
+  });
+
+  const remove = useMutation({
+    mutationFn: (id: string) => removeKid({ data: { id } }),
+    onSuccess: () => {
+      toast.success("Removed from family.");
+      qc.invalidateQueries({ queryKey: ["family"] });
+      qc.invalidateQueries({ queryKey: ["instances"] });
+    },
+    onError: (e) => toast.error((e as Error).message),
   });
 
   const [testCreds, setTestCreds] = useState<{ name: string; email: string; password: string }[] | null>(null);
@@ -71,9 +81,29 @@ function FamilyPage() {
             <span className="text-[10px] font-semibold uppercase tracking-wider px-2 py-1 rounded-full bg-secondary text-muted-foreground">
               {m.role}
             </span>
+            {isParent && m.role === "kid" && m.id !== me?.profile?.id && (
+              <Button
+                variant="ghost"
+                size="icon"
+                aria-label={`Remove ${m.display_name}`}
+                disabled={remove.isPending}
+                onClick={() => {
+                  if (
+                    confirm(
+                      `Remove ${m.display_name} from the family?\n\nThis deletes their tasks, account ledger, and recurring allowance. Their sign-in account is kept and can be re-invited later.`,
+                    )
+                  ) {
+                    remove.mutate(m.id);
+                  }
+                }}
+              >
+                <Trash2 className="h-4 w-4 text-destructive" />
+              </Button>
+            )}
           </div>
         ))}
       </section>
+
 
       {isParent && (
         <>
