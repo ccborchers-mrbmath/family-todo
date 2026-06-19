@@ -183,7 +183,7 @@ export const verifyInstance = createServerFn({ method: "POST" })
     }
     const { error } = await supabase
       .from("task_instances")
-      .update(update)
+      .update(update as never)
       .eq("id", data.id);
     if (error) throw new Error(error.message);
     return { ok: true };
