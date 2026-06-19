@@ -1,11 +1,11 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
-import { Mail, Trash2, UserPlus, CheckCircle2, Clock, FlaskConical, Copy } from "lucide-react";
+import { Mail, Trash2, UserPlus, CheckCircle2, Clock, FlaskConical, Copy, RotateCcw } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { listFamilyData, inviteKid, deleteInvite, getMe, removeKid } from "@/lib/family.functions";
+import { listFamilyData, inviteKid, deleteInvite, getMe, removeKid, resetKid } from "@/lib/family.functions";
 import { createTestKids } from "@/lib/test-accounts.functions";
 import { toast } from "sonner";
 
@@ -46,6 +46,18 @@ function FamilyPage() {
     onError: (e) => toast.error((e as Error).message),
   });
 
+  const reset = useMutation({
+    mutationFn: (id: string) => resetKid({ data: { id } }),
+    onSuccess: () => {
+      toast.success("Fresh start — tasks and rewards cleared.");
+      qc.invalidateQueries({ queryKey: ["family"] });
+      qc.invalidateQueries({ queryKey: ["instances"] });
+      qc.invalidateQueries({ queryKey: ["tasks"] });
+      qc.invalidateQueries({ queryKey: ["account"] });
+    },
+    onError: (e) => toast.error((e as Error).message),
+  });
+
   const [testCreds, setTestCreds] = useState<{ name: string; email: string; password: string }[] | null>(null);
   const makeTestKids = useMutation({
     mutationFn: () => createTestKids(),
@@ -82,23 +94,42 @@ function FamilyPage() {
               {m.role}
             </span>
             {isParent && m.role === "kid" && m.id !== me?.profile?.id && (
-              <Button
-                variant="ghost"
-                size="icon"
-                aria-label={`Remove ${m.display_name}`}
-                disabled={remove.isPending}
-                onClick={() => {
-                  if (
-                    confirm(
-                      `Remove ${m.display_name} from the family?\n\nThis deletes their tasks, account ledger, and recurring allowance. Their sign-in account is kept and can be re-invited later.`,
-                    )
-                  ) {
-                    remove.mutate(m.id);
-                  }
-                }}
-              >
-                <Trash2 className="h-4 w-4 text-destructive" />
-              </Button>
+              <>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  aria-label={`Reset ${m.display_name}`}
+                  disabled={reset.isPending}
+                  onClick={() => {
+                    if (
+                      confirm(
+                        `Reset ${m.display_name} for a fresh start?\n\nThis clears all their tasks, completed history, account balance, and recurring allowance. They stay in the family.`,
+                      )
+                    ) {
+                      reset.mutate(m.id);
+                    }
+                  }}
+                >
+                  <RotateCcw className="h-4 w-4 text-accent" />
+                </Button>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  aria-label={`Remove ${m.display_name}`}
+                  disabled={remove.isPending}
+                  onClick={() => {
+                    if (
+                      confirm(
+                        `Remove ${m.display_name} from the family?\n\nThis deletes their tasks, account ledger, and recurring allowance. Their sign-in account is kept and can be re-invited later.`,
+                      )
+                    ) {
+                      remove.mutate(m.id);
+                    }
+                  }}
+                >
+                  <Trash2 className="h-4 w-4 text-destructive" />
+                </Button>
+              </>
             )}
           </div>
         ))}
