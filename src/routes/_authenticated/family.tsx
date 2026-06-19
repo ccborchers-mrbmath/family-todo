@@ -81,9 +81,29 @@ function FamilyPage() {
             <span className="text-[10px] font-semibold uppercase tracking-wider px-2 py-1 rounded-full bg-secondary text-muted-foreground">
               {m.role}
             </span>
+            {isParent && m.role === "kid" && m.id !== me?.profile?.id && (
+              <Button
+                variant="ghost"
+                size="icon"
+                aria-label={`Remove ${m.display_name}`}
+                disabled={remove.isPending}
+                onClick={() => {
+                  if (
+                    confirm(
+                      `Remove ${m.display_name} from the family?\n\nThis deletes their tasks, account ledger, and recurring allowance. Their sign-in account is kept and can be re-invited later.`,
+                    )
+                  ) {
+                    remove.mutate(m.id);
+                  }
+                }}
+              >
+                <Trash2 className="h-4 w-4 text-destructive" />
+              </Button>
+            )}
           </div>
         ))}
       </section>
+
 
       {isParent && (
         <>
