@@ -81,9 +81,14 @@ function KidDash() {
     onSettled: () => qc.invalidateQueries({ queryKey: ["instances"] }),
   });
 
-  const todayList = useMemo(() => instances.filter((i) => i.due_date === today), [instances, today]);
-  const upcoming = useMemo(() => instances.filter((i) => i.due_date > today), [instances, today]);
   const rejected = useMemo(() => instances.filter((i) => i.status === "rejected"), [instances]);
+  const rejectedIds = useMemo(() => new Set(rejected.map((i) => i.id)), [rejected]);
+  // Include overdue pending/submitted/approved items so yesterday's "once" tasks don't vanish.
+  const todayList = useMemo(
+    () => instances.filter((i) => i.due_date <= today && !rejectedIds.has(i.id)),
+    [instances, today, rejectedIds],
+  );
+  const upcoming = useMemo(() => instances.filter((i) => i.due_date > today), [instances, today]);
 
   return (
     <div className="space-y-8">
