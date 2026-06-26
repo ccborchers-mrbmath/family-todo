@@ -16,6 +16,7 @@ import { Route as AuthenticatedVerifyRouteImport } from './routes/_authenticated
 import { Route as AuthenticatedOnboardingRouteImport } from './routes/_authenticated/onboarding'
 import { Route as AuthenticatedMyAccountRouteImport } from './routes/_authenticated/my-account'
 import { Route as AuthenticatedFamilyRouteImport } from './routes/_authenticated/family'
+import { Route as AuthenticatedEncouragementRouteImport } from './routes/_authenticated/encouragement'
 import { Route as AuthenticatedDashboardRouteImport } from './routes/_authenticated/dashboard'
 import { Route as AuthenticatedAccountsRouteImport } from './routes/_authenticated/accounts'
 import { Route as AuthenticatedTasksIndexRouteImport } from './routes/_authenticated/tasks.index'
@@ -55,6 +56,12 @@ const AuthenticatedFamilyRoute = AuthenticatedFamilyRouteImport.update({
   path: '/family',
   getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
+const AuthenticatedEncouragementRoute =
+  AuthenticatedEncouragementRouteImport.update({
+    id: '/encouragement',
+    path: '/encouragement',
+    getParentRoute: () => AuthenticatedRouteRoute,
+  } as any)
 const AuthenticatedDashboardRoute = AuthenticatedDashboardRouteImport.update({
   id: '/dashboard',
   path: '/dashboard',
@@ -81,6 +88,7 @@ export interface FileRoutesByFullPath {
   '/auth': typeof AuthRoute
   '/accounts': typeof AuthenticatedAccountsRoute
   '/dashboard': typeof AuthenticatedDashboardRoute
+  '/encouragement': typeof AuthenticatedEncouragementRoute
   '/family': typeof AuthenticatedFamilyRoute
   '/my-account': typeof AuthenticatedMyAccountRoute
   '/onboarding': typeof AuthenticatedOnboardingRoute
@@ -93,6 +101,7 @@ export interface FileRoutesByTo {
   '/auth': typeof AuthRoute
   '/accounts': typeof AuthenticatedAccountsRoute
   '/dashboard': typeof AuthenticatedDashboardRoute
+  '/encouragement': typeof AuthenticatedEncouragementRoute
   '/family': typeof AuthenticatedFamilyRoute
   '/my-account': typeof AuthenticatedMyAccountRoute
   '/onboarding': typeof AuthenticatedOnboardingRoute
@@ -107,6 +116,7 @@ export interface FileRoutesById {
   '/auth': typeof AuthRoute
   '/_authenticated/accounts': typeof AuthenticatedAccountsRoute
   '/_authenticated/dashboard': typeof AuthenticatedDashboardRoute
+  '/_authenticated/encouragement': typeof AuthenticatedEncouragementRoute
   '/_authenticated/family': typeof AuthenticatedFamilyRoute
   '/_authenticated/my-account': typeof AuthenticatedMyAccountRoute
   '/_authenticated/onboarding': typeof AuthenticatedOnboardingRoute
@@ -121,6 +131,7 @@ export interface FileRouteTypes {
     | '/auth'
     | '/accounts'
     | '/dashboard'
+    | '/encouragement'
     | '/family'
     | '/my-account'
     | '/onboarding'
@@ -133,6 +144,7 @@ export interface FileRouteTypes {
     | '/auth'
     | '/accounts'
     | '/dashboard'
+    | '/encouragement'
     | '/family'
     | '/my-account'
     | '/onboarding'
@@ -146,6 +158,7 @@ export interface FileRouteTypes {
     | '/auth'
     | '/_authenticated/accounts'
     | '/_authenticated/dashboard'
+    | '/_authenticated/encouragement'
     | '/_authenticated/family'
     | '/_authenticated/my-account'
     | '/_authenticated/onboarding'
@@ -218,6 +231,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedDashboardRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
+    '/_authenticated/encouragement': {
+      id: '/_authenticated/encouragement'
+      path: '/encouragement'
+      fullPath: '/encouragement'
+      preLoaderRoute: typeof AuthenticatedEncouragementRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
     '/_authenticated/accounts': {
       id: '/_authenticated/accounts'
       path: '/accounts'
@@ -245,6 +265,7 @@ declare module '@tanstack/react-router' {
 interface AuthenticatedRouteRouteChildren {
   AuthenticatedAccountsRoute: typeof AuthenticatedAccountsRoute
   AuthenticatedDashboardRoute: typeof AuthenticatedDashboardRoute
+  AuthenticatedEncouragementRoute: typeof AuthenticatedEncouragementRoute
   AuthenticatedFamilyRoute: typeof AuthenticatedFamilyRoute
   AuthenticatedMyAccountRoute: typeof AuthenticatedMyAccountRoute
   AuthenticatedOnboardingRoute: typeof AuthenticatedOnboardingRoute
@@ -256,6 +277,7 @@ interface AuthenticatedRouteRouteChildren {
 const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
   AuthenticatedAccountsRoute: AuthenticatedAccountsRoute,
   AuthenticatedDashboardRoute: AuthenticatedDashboardRoute,
+  AuthenticatedEncouragementRoute: AuthenticatedEncouragementRoute,
   AuthenticatedFamilyRoute: AuthenticatedFamilyRoute,
   AuthenticatedMyAccountRoute: AuthenticatedMyAccountRoute,
   AuthenticatedOnboardingRoute: AuthenticatedOnboardingRoute,
