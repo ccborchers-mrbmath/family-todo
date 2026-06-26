@@ -83,41 +83,6 @@ export type Database = {
           },
         ]
       }
-      encouragement_messages: {
-        Row: {
-          author_id: string
-          child_id: string
-          created_at: string
-          family_id: string
-          id: string
-          message: string
-        }
-        Insert: {
-          author_id: string
-          child_id: string
-          created_at?: string
-          family_id: string
-          id?: string
-          message: string
-        }
-        Update: {
-          author_id?: string
-          child_id?: string
-          created_at?: string
-          family_id?: string
-          id?: string
-          message?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "encouragement_messages_family_id_fkey"
-            columns: ["family_id"]
-            isOneToOne: false
-            referencedRelation: "families"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
       families: {
         Row: {
           created_at: string
