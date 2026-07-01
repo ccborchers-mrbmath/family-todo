@@ -1,72 +1,126 @@
+## Kinquest Notifications
 
-# Family Chore & Task Manager — v1
+Add real push notifications so parents and kids get alerted about important activity — even when the app is closed — plus subtler in-app pings when the app is already open. Uses the device's default notification sound and Kinquest's app icon/badge.
 
-A custom family management app starting with chores & tasks. You sign in as parent, your two kids sign in with Google, and you assign tasks/chores with flexible recurrence. Kids check off completions (with a celebration animation), and you verify or reject them.
+### What you (the human) need to do once, up front
 
-## Scope (v1)
+Push on the web is only allowed by browsers if we route it through **Firebase Cloud Messaging (FCM)** — this is Google's rule for Chrome/Android, not ours. FCM is free.
 
-In: Google sign-in, parent-pre-registers kids by email, create/assign tasks, recurrence (daily / weekly-by-weekday / monthly / custom interval), kid checkoff with celebration, parent verification (approve/reject with note), separate parent vs kid dashboards.
+1. Create a free Firebase project at `console.firebase.google.com` (name it "Kinquest").
+2. In that project: **Project settings → Cloud Messaging** → generate a **Web Push certificate (VAPID key)**.
+3. **Project settings → Service accounts** → generate a **private key** (downloads a JSON file).
+4. Paste four values into Kinquest secrets when I ask:
+   - `FIREBASE_PROJECT_ID`
+   - `FIREBASE_CLIENT_EMAIL`
+   - `FIREBASE_PRIVATE_KEY` (from the JSON)
+   - `VITE_FIREBASE_VAPID_KEY` (the Web Push certificate — safe to expose)
 
-Out (future tiers): rewards/points, calendar/notifications, multiple parents, messaging, photo proof.
+I'll walk you through where each value lives when we get there.
 
-## Visual direction
+### What each user will experience
 
-Bold, game-inspired (Candy Crush / Fortnite energy) but mature enough for 15–16 year-olds — no childish cartoons. Dark base with vivid neon/candy accent gradients (electric purple, hot pink, cyan, lime), chunky rounded cards, glossy buttons, satisfying micro-interactions. Celebration on completion = burst of confetti + scaling check + short upbeat message ("Nice!", "Crushed it!", "+1 streak"), via framer-motion. No emoji-only smiley; styled icon + animated badge.
+**First time they open Kinquest after this ships**
 
-## Backend (Lovable Cloud)
+- A friendly banner: "Turn on notifications so you don't miss tasks, rewards and messages" with an **Enable** button and a **Not now** link. No auto-prompt — Chrome penalises apps that ask without a user click.
+- Tapping **Enable** shows the browser's permission dialog.
+- iPhone users see extra help: "To get notifications on iPhone, tap the share icon and **Add to Home Screen** first, then open Kinquest from the icon."
 
-Enable Lovable Cloud. Use Google auth provider.
+**Once enabled**
 
-Tables:
-- `profiles` (id → auth.users, display_name, avatar_url, role: 'parent'|'kid', family_id, created_at)
-- `families` (id, name, created_by)
-- `family_invites` (id, family_id, email, role, claimed_at) — parent pre-registers kids' Google emails; on first sign-in a trigger links the new auth user to the family with role 'kid'
-- `tasks` (id, family_id, assignee_id, created_by, title, description, recurrence_type: 'once'|'daily'|'weekly'|'monthly'|'custom', recurrence_config jsonb {weekdays?, day_of_month?, interval_days?}, start_date, end_date, active)
-- `task_instances` (id, task_id, assignee_id, family_id, due_date, status: 'pending'|'submitted'|'approved'|'rejected', completed_at, verified_at, verifier_id, reject_note) — one row per occurrence; generated lazily for the visible window
-- `user_roles` (separate table; `app_role` enum 'parent'|'kid'; `has_role()` security-definer fn) — used by all RLS policies
+- **App closed / phone locked** → notification appears in the tray, plays the device's default sound, shows the Kinquest icon, updates the app-icon badge count. Tapping it opens Kinquest straight to the relevant page (e.g. the task to verify).
+- **App open** → no OS notification; instead a small toast slides in with a soft chime and updates a bell icon in the top bar with an unread count.
 
-RLS: members can read rows where `family_id` matches their profile's family; kids can update only their own `task_instances` from pending→submitted; parents can update verification fields and CRUD tasks. Grants for `authenticated` + `service_role` per public-schema rule.
+**Notification wording**
 
-Server functions (TanStack `createServerFn`, all behind `requireSupabaseAuth`):
-- `inviteKid({email, displayName})` — parent only
-- `createTask(...)`, `updateTask`, `deactivateTask` — parent only
-- `listMyInstances({from, to})` — returns instances for the signed-in kid; lazily materializes upcoming occurrences from recurrence config
-- `listFamilyInstances({from, to, status?})` — parent dashboard
-- `submitInstance({instanceId})` — kid marks complete
-- `verifyInstance({instanceId, decision, note?})` — parent approve/reject
+- Kid completes a task → parent gets: *"Siya finished 'Tidy room' — tap to verify"*
+- Parent verifies / rewards / sends back → kid gets: *"Dad approved 'Tidy room' 🎉 R10 added"* or *"Dad sent 'Tidy room' back — tap to redo"*
+- New encouragement post → kid gets: *"New message from Dad ❤️"*
+- Kid asks to spend → parent gets: *"Siya wants to spend R25 — tap to approve"*
 
-## Routes
+### Settings
 
-Public: `/`, `/auth`
-Protected (`_authenticated/`):
-- `/dashboard` — role-aware: parent sees family overview + pending verifications; kid sees today + upcoming
-- `/tasks` — parent: list/create/edit tasks & recurrence; kid: read-only assigned list
-- `/tasks/new`, `/tasks/$taskId/edit` — parent
-- `/verify` — parent queue of submitted instances
-- `/family` — parent: invite kids by email, see linked accounts
+A new **Notifications** section on the Family page lets each user:
+- See which devices are registered (e.g. "iPhone 15 — Safari, added 2 days ago") and remove old ones.
+- Toggle each event type on/off per user (so a kid can mute encouragement pings but keep task alerts, etc.).
+- A master **Pause all notifications** switch.
 
-## Key UX details
+### iPhone / Android specifics
 
-- Kid card: large checkbox, title, due chip. On check → optimistic update, confetti + scale/spring animation, toast "Sent to Dad for review".
-- Parent verify card: kid avatar, task title, completed time, Approve / Reject (+ note dialog) buttons.
-- Recurrence editor: segmented control (Once / Daily / Weekly / Monthly / Custom) with conditional inputs (weekday picker, day-of-month, interval N days).
+- **Android**: works in any Chrome-based browser once the user grants permission. Installing to home screen is optional but recommended.
+- **iPhone/iPad**: Apple *requires* the app to be **Added to Home Screen** first — push does not work in a regular Safari tab. We'll detect iOS and show clear one-time instructions with a screenshot.
+- **Desktop**: works in Chrome, Edge, Firefox on Windows/Mac/Linux out of the box.
 
-## Technical notes
+### Sound
 
-- Stack: TanStack Start + Lovable Cloud (Supabase under the hood), Tailwind v4 design tokens in `src/styles.css`, shadcn/ui, framer-motion, canvas-confetti.
-- Auth: Google via `lovable.auth.signInWithOAuth("google", ...)`; enable Google provider on Cloud. Managed `_authenticated/route.tsx` gate.
-- Recurrence: store as structured jsonb; expand on read in server fn for the requested date window (no cron needed v1).
-- Validation: Zod on every server fn input (title length, valid recurrence config, etc.).
-- Realtime (optional polish): subscribe parent dashboard to `task_instances` inserts/updates so kid checkoffs appear instantly.
+Uses the **device's default notification sound** for push (respects Do Not Disturb, per-app volume, silent mode — no surprises). In-app toasts use a short soft chime that can be muted in settings.
 
-## Build order
+### What we won't be able to do (browser/Apple limits)
 
-1. Enable Cloud + Google auth, design tokens & base layout
-2. Schema + RLS + roles + invite-on-signup trigger
-3. Family/invite UI (parent)
-4. Task CRUD + recurrence editor
-5. Kid dashboard + checkoff + celebration animation
-6. Parent verify queue + approve/reject
-7. Polish: realtime, empty states, streak chip
+- Cannot force a notification if the user declined permission.
+- Cannot deliver push to iPhone Safari users who haven't Added to Home Screen (Apple's rule).
+- Notification sound on Android/iOS push is controlled by the OS — we can't play a custom melody there. Custom sounds only work for in-app toasts.
+- Notifications cannot open modals or run code beyond opening a page.
 
-Ready to build on approval.
+---
+
+## Technical section (for reference)
+
+**Stack additions**
+- `firebase` (client, for `getMessaging` / `getToken` / `onMessage`).
+- `firebase-admin` (server, called from a TanStack `createServerFn` to send push).
+- A dedicated `public/firebase-messaging-sw.js` service worker (allowed by the PWA rules as a messaging worker; separate from any app-shell worker and unaffected by preview guards).
+
+**Database (new tables via migration)**
+```
+push_devices
+  id, user_id, family_id, fcm_token (unique), platform, user_agent,
+  last_seen_at, created_at
+
+notification_prefs
+  user_id (pk), task_events bool, reward_events bool,
+  encouragement_events bool, spend_events bool, paused bool
+```
+RLS: user can read/write only their own rows. Parents can read `push_devices.user_id` for kids in their family (for the "which devices are registered" view). GRANTs added in the same migration.
+
+**Notification triggers (server side)**
+- All events are already state changes in existing tables (`task_instances.status`, `account_transactions` insert, `encouragement_messages` insert, expense-request insert). Add a shared `send_push(user_id, payload)` server helper that:
+  1. Reads recipient's `notification_prefs`, bails if paused/disabled for that event type.
+  2. Loads all `fcm_token`s for that user.
+  3. Sends via `firebase-admin` `messaging().sendEachForMulticast`.
+  4. Prunes tokens that come back as `unregistered`/`invalid`.
+- Trigger sites:
+  - `task_instances` status → `pending_verification`: notify all parents in family.
+  - `task_instances` status → `approved` / `rejected`: notify assignee kid (approved message includes reward amount if any).
+  - `encouragement_messages` insert: notify the target child.
+  - Expense request insert (existing "Ask to spend" path): notify all parents.
+- Kept as post-write calls inside the existing server functions (not DB triggers) so we can use the Node `firebase-admin` SDK.
+
+**Client wiring**
+- New `src/lib/push.ts`:
+  - `initPush()` — registers `firebase-messaging-sw.js`, calls `getToken({ vapidKey })`, upserts into `push_devices`.
+  - `onForegroundMessage()` — feeds foreground pushes into an in-app toast + bell/unread store.
+- A `<NotificationPrompt />` banner on the authenticated shell that appears only when `Notification.permission === "default"` and the user hasn't dismissed it.
+- iOS detection (`/iP(hone|ad|od)/`) + not-standalone → show "Add to Home Screen first" instructions instead of the enable button.
+- Bell icon in the top bar with an unread badge, backed by a lightweight `notifications_seen` table or local storage (small design choice, decide during build).
+
+**Service worker**
+- `public/firebase-messaging-sw.js` — minimal Firebase Messaging worker; handles `notificationclick` to `clients.openWindow(payload.data.url)` so tapping a push deep-links into the right page. This worker is exempt from Kinquest's PWA preview guards (it's a messaging worker, not an app-shell cache).
+
+**Secrets to add (I'll request when we start)**
+- `FIREBASE_PROJECT_ID` (runtime)
+- `FIREBASE_CLIENT_EMAIL` (runtime)
+- `FIREBASE_PRIVATE_KEY` (runtime)
+- `VITE_FIREBASE_VAPID_KEY` (runtime, exposed to client — safe, VAPID public key)
+- Firebase web-app config values (`apiKey`, `authDomain`, `messagingSenderId`, `appId`) — also client-safe, either as `VITE_` env or a small JSON constant.
+
+**Rollout order when implementing**
+1. Migration for `push_devices` + `notification_prefs` + RLS + GRANTs.
+2. Add Firebase config & secrets, install `firebase` + `firebase-admin`.
+3. Client: service worker, `initPush`, permission banner, bell/toast.
+4. Server: `send_push` helper + wire into the four event sites.
+5. Notifications settings UI on Family page.
+6. iPhone Add-to-Home-Screen guidance + testing on real Android + iOS PWA + desktop.
+
+### Estimated scope
+
+Around a day of build work end-to-end, with most of it in the server-side push helper, permission UX and cross-device testing.
