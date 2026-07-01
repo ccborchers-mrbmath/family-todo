@@ -186,6 +186,39 @@ export type Database = {
           },
         ]
       }
+      notification_prefs: {
+        Row: {
+          created_at: string
+          encouragement_events: boolean
+          paused: boolean
+          reward_events: boolean
+          spend_events: boolean
+          task_events: boolean
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          encouragement_events?: boolean
+          paused?: boolean
+          reward_events?: boolean
+          spend_events?: boolean
+          task_events?: boolean
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          encouragement_events?: boolean
+          paused?: boolean
+          reward_events?: boolean
+          spend_events?: boolean
+          task_events?: boolean
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       profiles: {
         Row: {
           avatar_url: string | null
@@ -214,6 +247,47 @@ export type Database = {
         Relationships: [
           {
             foreignKeyName: "profiles_family_id_fkey"
+            columns: ["family_id"]
+            isOneToOne: false
+            referencedRelation: "families"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      push_devices: {
+        Row: {
+          created_at: string
+          family_id: string | null
+          fcm_token: string
+          id: string
+          last_seen_at: string
+          platform: string | null
+          user_agent: string | null
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          family_id?: string | null
+          fcm_token: string
+          id?: string
+          last_seen_at?: string
+          platform?: string | null
+          user_agent?: string | null
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          family_id?: string | null
+          fcm_token?: string
+          id?: string
+          last_seen_at?: string
+          platform?: string | null
+          user_agent?: string | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "push_devices_family_id_fkey"
             columns: ["family_id"]
             isOneToOne: false
             referencedRelation: "families"
