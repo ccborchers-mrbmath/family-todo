@@ -421,7 +421,6 @@ function ParentWall() {
     onError: (e) => toast.error((e as Error).message),
   });
 
-  const selectedKid = kids.find((k) => k.id === childId);
   const hasContent = text.trim().length > 0 || !!photo || !!voice.blob;
 
   return (
