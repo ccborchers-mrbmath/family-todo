@@ -2,13 +2,14 @@ import { createFileRoute } from "@tanstack/react-router";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useEffect, useState, useMemo, useRef } from "react";
 import { motion } from "framer-motion";
-import { Heart, Sparkles, Send, Trash2, Image as ImageIcon, Mic, Square, X, Camera } from "lucide-react";
+import { Heart, Sparkles, Send, Trash2, Image as ImageIcon, Mic, Square, X, Camera, Wand2, Loader2 } from "lucide-react";
 import { getMe, listFamilyData } from "@/lib/family.functions";
 import {
   listEncouragement,
   sendEncouragement,
   deleteEncouragement,
 } from "@/lib/encouragement.functions";
+import { transcribeVoice } from "@/lib/transcribe.functions";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
@@ -284,6 +285,48 @@ function ParentWall() {
   const cameraInputRef = useRef<HTMLInputElement>(null);
   const voice = useVoiceRecorder();
   const [uploading, setUploading] = useState(false);
+  const [transcribing, setTranscribing] = useState(false);
+  const lastTranscribedRef = useRef<Blob | null>(null);
+
+  const runTranscription = async (blob: Blob) => {
+    setTranscribing(true);
+    try {
+      const buf = await blob.arrayBuffer();
+      let binary = "";
+      const bytes = new Uint8Array(buf);
+      const chunk = 0x8000;
+      for (let i = 0; i < bytes.length; i += chunk) {
+        binary += String.fromCharCode(...bytes.subarray(i, i + chunk));
+      }
+      const audioBase64 = btoa(binary);
+      const { text: transcript } = await transcribeVoice({
+        data: { audioBase64, mime: blob.type || "audio/webm" },
+      });
+      if (transcript) {
+        setText((prev) => {
+          const combined = prev.trim() ? `${prev.trim()}\n\n${transcript}` : transcript;
+          return combined.slice(0, MAX_MESSAGE);
+        });
+        toast.success("Voice note transcribed");
+      } else {
+        toast.info("Couldn't hear any speech in that recording.");
+      }
+    } catch (e) {
+      toast.error((e as Error).message);
+    } finally {
+      setTranscribing(false);
+    }
+  };
+
+  // Auto-transcribe each new recording once
+  useEffect(() => {
+    if (voice.blob && voice.blob !== lastTranscribedRef.current && !voice.recording) {
+      lastTranscribedRef.current = voice.blob;
+      void runTranscription(voice.blob);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [voice.blob, voice.recording]);
+
 
   useEffect(() => {
     if (!childId && kids.length > 0) setChildId(kids[0].id);
@@ -438,17 +481,43 @@ function ParentWall() {
 
               {/* Voice preview */}
               {voice.url && !voice.recording && (
-                <div className="flex items-center gap-2 rounded-2xl border border-border/60 p-2">
-                  <audio controls src={voice.url} className="flex-1" />
-                  <Button
-                    type="button"
-                    size="icon"
-                    variant="ghost"
-                    onClick={voice.reset}
-                    aria-label="Discard recording"
-                  >
-                    <X className="h-4 w-4" />
-                  </Button>
+                <div className="space-y-2 rounded-2xl border border-border/60 p-2">
+                  <div className="flex items-center gap-2">
+                    <audio controls src={voice.url} className="flex-1" />
+                    <Button
+                      type="button"
+                      size="icon"
+                      variant="ghost"
+                      onClick={() => {
+                        lastTranscribedRef.current = null;
+                        voice.reset();
+                      }}
+                      aria-label="Discard recording"
+                    >
+                      <X className="h-4 w-4" />
+                    </Button>
+                  </div>
+                  <div className="flex items-center justify-between px-1">
+                    {transcribing ? (
+                      <span className="flex items-center gap-2 text-xs text-muted-foreground">
+                        <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                        Transcribing your voice note…
+                      </span>
+                    ) : (
+                      <span className="text-xs text-muted-foreground">
+                        Voice note attached — transcript added to your message
+                      </span>
+                    )}
+                    <Button
+                      type="button"
+                      size="sm"
+                      variant="ghost"
+                      disabled={transcribing || !voice.blob}
+                      onClick={() => voice.blob && runTranscription(voice.blob)}
+                    >
+                      <Wand2 className="h-3.5 w-3.5" /> Re-transcribe
+                    </Button>
+                  </div>
                 </div>
               )}
 
@@ -524,7 +593,7 @@ function ParentWall() {
                   <Button
                     type="submit"
                     disabled={
-                      send.isPending || uploading || !hasContent || !childId || voice.recording
+                      send.isPending || uploading || !hasContent || !childId || voice.recording || transcribing
                     }
                     className="bg-gradient-primary text-primary-foreground border-0 shadow-pop"
                   >
