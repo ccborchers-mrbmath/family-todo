@@ -90,7 +90,9 @@ export type Database = {
           created_at: string
           family_id: string
           id: string
-          message: string
+          message: string | null
+          photo_path: string | null
+          voice_path: string | null
         }
         Insert: {
           author_id: string
@@ -98,7 +100,9 @@ export type Database = {
           created_at?: string
           family_id: string
           id?: string
-          message: string
+          message?: string | null
+          photo_path?: string | null
+          voice_path?: string | null
         }
         Update: {
           author_id?: string
@@ -106,7 +110,9 @@ export type Database = {
           created_at?: string
           family_id?: string
           id?: string
-          message?: string
+          message?: string | null
+          photo_path?: string | null
+          voice_path?: string | null
         }
         Relationships: [
           {
