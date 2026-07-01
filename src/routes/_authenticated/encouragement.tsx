@@ -593,7 +593,7 @@ function ParentWall() {
                   <Button
                     type="submit"
                     disabled={
-                      send.isPending || uploading || !hasContent || !childId || voice.recording
+                      send.isPending || uploading || !hasContent || !childId || voice.recording || transcribing
                     }
                     className="bg-gradient-primary text-primary-foreground border-0 shadow-pop"
                   >
