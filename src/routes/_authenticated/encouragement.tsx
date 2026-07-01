@@ -1,8 +1,8 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { useEffect, useState, useMemo } from "react";
+import { useEffect, useState, useMemo, useRef } from "react";
 import { motion } from "framer-motion";
-import { Heart, Sparkles, Send, Trash2 } from "lucide-react";
+import { Heart, Sparkles, Send, Trash2, Image as ImageIcon, Mic, Square, X, Camera } from "lucide-react";
 import { getMe, listFamilyData } from "@/lib/family.functions";
 import {
   listEncouragement,
@@ -19,6 +19,11 @@ export const Route = createFileRoute("/_authenticated/encouragement")({
   component: EncouragementPage,
 });
 
+const BUCKET = "encouragement-media";
+const MAX_MESSAGE = 1000;
+const MAX_PHOTO_BYTES = 8 * 1024 * 1024; // 8 MB
+const MAX_VOICE_BYTES = 10 * 1024 * 1024; // 10 MB
+
 function EncouragementPage() {
   const { data: me } = useQuery({ queryKey: ["me"], queryFn: () => getMe() });
   if (!me) return null;
@@ -31,16 +36,23 @@ const NOTE_STYLES = [
   "bg-gradient-energy text-primary-foreground",
 ];
 
+type WallMessage = {
+  id: string;
+  message: string | null;
+  author_id: string;
+  created_at: string;
+  photo_url: string | null;
+  voice_url: string | null;
+};
+
 function MessageCard({
-  message,
+  m,
   author,
-  createdAt,
   index,
   onDelete,
 }: {
-  message: string;
+  m: WallMessage;
   author?: string;
-  createdAt: string;
   index: number;
   onDelete?: () => void;
 }) {
@@ -53,10 +65,37 @@ function MessageCard({
       className={`relative overflow-hidden rounded-3xl p-5 shadow-pop ${style}`}
     >
       <Heart className="absolute -right-3 -top-3 h-16 w-16 rotate-12 opacity-15" />
-      <p className="relative whitespace-pre-wrap text-base font-medium leading-relaxed">{message}</p>
+      {m.photo_url && (
+        <a
+          href={m.photo_url}
+          target="_blank"
+          rel="noreferrer"
+          className="relative mb-3 block overflow-hidden rounded-2xl"
+        >
+          <img
+            src={m.photo_url}
+            alt="Encouragement photo"
+            className="max-h-80 w-full object-cover"
+            loading="lazy"
+          />
+        </a>
+      )}
+      {m.message && (
+        <p className="relative whitespace-pre-wrap text-base font-medium leading-relaxed">
+          {m.message}
+        </p>
+      )}
+      {m.voice_url && (
+        <audio
+          controls
+          src={m.voice_url}
+          className="relative mt-3 w-full"
+          preload="metadata"
+        />
+      )}
       <div className="relative mt-4 flex items-center justify-between text-xs opacity-80">
         <span>{author ? `From ${author}` : "From your family"}</span>
-        <span>{new Date(createdAt).toLocaleDateString()}</span>
+        <span>{new Date(m.created_at).toLocaleDateString()}</span>
       </div>
       {onDelete && (
         <Button
@@ -101,7 +140,7 @@ function KidWall() {
   const { data: family } = useQuery({ queryKey: ["family"], queryFn: () => listFamilyData() });
   const { data: messages = [] } = useQuery({
     queryKey: ["encouragement", "me"],
-    queryFn: () => listEncouragement({ data: {} }),
+    queryFn: () => listEncouragement({ data: {} }) as Promise<WallMessage[]>,
   });
 
   useEffect(() => {
@@ -134,9 +173,8 @@ function KidWall() {
           {messages.map((m, i) => (
             <MessageCard
               key={m.id}
-              message={m.message}
+              m={m}
               author={authorName[m.author_id]}
-              createdAt={m.created_at}
               index={i}
             />
           ))}
@@ -146,32 +184,179 @@ function KidWall() {
   );
 }
 
+// ---------- Voice recorder hook ----------
+function useVoiceRecorder() {
+  const [recording, setRecording] = useState(false);
+  const [blob, setBlob] = useState<Blob | null>(null);
+  const [url, setUrl] = useState<string | null>(null);
+  const [elapsed, setElapsed] = useState(0);
+  const mediaRef = useRef<MediaRecorder | null>(null);
+  const chunksRef = useRef<Blob[]>([]);
+  const streamRef = useRef<MediaStream | null>(null);
+  const timerRef = useRef<number | null>(null);
+
+  const cleanup = () => {
+    if (timerRef.current) window.clearInterval(timerRef.current);
+    timerRef.current = null;
+    streamRef.current?.getTracks().forEach((t) => t.stop());
+    streamRef.current = null;
+  };
+
+  const start = async () => {
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      streamRef.current = stream;
+      chunksRef.current = [];
+      const mime = MediaRecorder.isTypeSupported("audio/webm;codecs=opus")
+        ? "audio/webm;codecs=opus"
+        : MediaRecorder.isTypeSupported("audio/mp4")
+          ? "audio/mp4"
+          : "";
+      const mr = new MediaRecorder(stream, mime ? { mimeType: mime } : undefined);
+      mediaRef.current = mr;
+      mr.ondataavailable = (e) => e.data.size && chunksRef.current.push(e.data);
+      mr.onstop = () => {
+        const b = new Blob(chunksRef.current, { type: mr.mimeType || "audio/webm" });
+        setBlob(b);
+        setUrl((prev) => {
+          if (prev) URL.revokeObjectURL(prev);
+          return URL.createObjectURL(b);
+        });
+        cleanup();
+      };
+      mr.start();
+      setRecording(true);
+      setElapsed(0);
+      timerRef.current = window.setInterval(() => setElapsed((v) => v + 1), 1000);
+    } catch (e) {
+      toast.error("Microphone access denied");
+    }
+  };
+
+  const stop = () => {
+    mediaRef.current?.stop();
+    setRecording(false);
+  };
+
+  const reset = () => {
+    if (url) URL.revokeObjectURL(url);
+    setBlob(null);
+    setUrl(null);
+    setElapsed(0);
+  };
+
+  useEffect(() => () => {
+    cleanup();
+    if (url) URL.revokeObjectURL(url);
+  }, [url]);
+
+  return { recording, blob, url, elapsed, start, stop, reset };
+}
+
+function extFromMime(mime: string, fallback: string) {
+  if (mime.includes("webm")) return "webm";
+  if (mime.includes("mp4")) return "m4a";
+  if (mime.includes("ogg")) return "ogg";
+  if (mime.includes("mpeg")) return "mp3";
+  if (mime.includes("wav")) return "wav";
+  if (mime.includes("png")) return "png";
+  if (mime.includes("jpeg") || mime.includes("jpg")) return "jpg";
+  if (mime.includes("webp")) return "webp";
+  if (mime.includes("heic")) return "heic";
+  return fallback;
+}
+
 function ParentWall() {
   const qc = useQueryClient();
+  const { data: me } = useQuery({ queryKey: ["me"], queryFn: () => getMe() });
   const { data: family } = useQuery({ queryKey: ["family"], queryFn: () => listFamilyData() });
   const kids = useMemo(
     () => (family?.members ?? []).filter((m) => m.role === "kid"),
     [family],
   );
+  const familyId = me?.family?.id;
 
   const [childId, setChildId] = useState<string | null>(null);
   const [text, setText] = useState("");
+  const [photo, setPhoto] = useState<File | null>(null);
+  const [photoPreview, setPhotoPreview] = useState<string | null>(null);
+  const photoInputRef = useRef<HTMLInputElement>(null);
+  const cameraInputRef = useRef<HTMLInputElement>(null);
+  const voice = useVoiceRecorder();
+  const [uploading, setUploading] = useState(false);
 
-  // Default to the first kid once the family loads.
   useEffect(() => {
     if (!childId && kids.length > 0) setChildId(kids[0].id);
   }, [kids, childId]);
 
+  useEffect(() => {
+    if (!photo) {
+      setPhotoPreview(null);
+      return;
+    }
+    const url = URL.createObjectURL(photo);
+    setPhotoPreview(url);
+    return () => URL.revokeObjectURL(url);
+  }, [photo]);
+
   const { data: messages = [] } = useQuery({
     queryKey: ["encouragement", childId],
-    queryFn: () => listEncouragement({ data: { childId: childId! } }),
+    queryFn: () =>
+      listEncouragement({ data: { childId: childId! } }) as Promise<WallMessage[]>,
     enabled: !!childId,
   });
 
+  const resetForm = () => {
+    setText("");
+    setPhoto(null);
+    voice.reset();
+    if (photoInputRef.current) photoInputRef.current.value = "";
+    if (cameraInputRef.current) cameraInputRef.current.value = "";
+  };
+
+  const uploadMedia = async (
+    file: Blob,
+    kind: "photo" | "voice",
+  ): Promise<string> => {
+    if (!familyId) throw new Error("No family");
+    const mime = file.type || (kind === "photo" ? "image/jpeg" : "audio/webm");
+    const ext = extFromMime(mime, kind === "photo" ? "jpg" : "webm");
+    const path = `${familyId}/${childId}/${kind}-${crypto.randomUUID()}.${ext}`;
+    const { error } = await supabase.storage.from(BUCKET).upload(path, file, {
+      contentType: mime,
+      upsert: false,
+    });
+    if (error) throw new Error(error.message);
+    return path;
+  };
+
   const send = useMutation({
-    mutationFn: () => sendEncouragement({ data: { childId: childId!, message: text } }),
+    mutationFn: async () => {
+      if (!childId) throw new Error("Pick a kid first");
+      setUploading(true);
+      try {
+        if (photo && photo.size > MAX_PHOTO_BYTES)
+          throw new Error("Photo too large (max 8 MB)");
+        if (voice.blob && voice.blob.size > MAX_VOICE_BYTES)
+          throw new Error("Voice note too long (max 10 MB)");
+
+        const photoPath = photo ? await uploadMedia(photo, "photo") : null;
+        const voicePath = voice.blob ? await uploadMedia(voice.blob, "voice") : null;
+
+        return sendEncouragement({
+          data: {
+            childId,
+            message: text.trim() || null,
+            photoPath,
+            voicePath,
+          },
+        });
+      } finally {
+        setUploading(false);
+      }
+    },
     onSuccess: () => {
-      setText("");
+      resetForm();
       toast.success("Encouragement sent! 💛");
       qc.invalidateQueries({ queryKey: ["encouragement", childId] });
     },
@@ -185,10 +370,11 @@ function ParentWall() {
   });
 
   const selectedKid = kids.find((k) => k.id === childId);
+  const hasContent = text.trim().length > 0 || !!photo || !!voice.blob;
 
   return (
     <div className="space-y-8">
-      <Header subtitle="Send a compliment, good-luck wish, or kind word to your kids" />
+      <Header subtitle="Send a message, photo, or voice note to your kids" />
 
       {kids.length === 0 ? (
         <EmptyState text="No kids linked yet. Invite them from the Family page." />
@@ -210,7 +396,7 @@ function ParentWall() {
             ))}
           </div>
 
-          <section className="rounded-3xl border border-border/60 bg-card p-5 space-y-3">
+          <section className="rounded-3xl border border-border/60 bg-card p-5 space-y-4">
             <div className="flex items-center gap-2 font-display font-bold">
               <Heart className="h-5 w-5 text-accent" />
               Write {selectedKid?.display_name ?? "your kid"} a note
@@ -219,25 +405,133 @@ function ParentWall() {
               className="space-y-3"
               onSubmit={(e) => {
                 e.preventDefault();
-                if (text.trim() && childId) send.mutate();
+                if (hasContent && childId && !send.isPending) send.mutate();
               }}
             >
               <Textarea
                 value={text}
-                onChange={(e) => setText(e.target.value)}
-                placeholder="You worked so hard this week — I'm proud of you! Good luck on your test today 🌟"
-                maxLength={500}
-                rows={3}
+                onChange={(e) => setText(e.target.value.slice(0, MAX_MESSAGE))}
+                placeholder="You worked so hard this week — I'm proud of you! 🌟"
+                maxLength={MAX_MESSAGE}
+                rows={4}
               />
-              <div className="flex items-center justify-between">
-                <span className="text-xs text-muted-foreground">{text.length}/500</span>
+              <div className="flex items-center justify-between text-xs text-muted-foreground">
+                <span>{text.length}/{MAX_MESSAGE}</span>
+              </div>
+
+              {/* Photo preview */}
+              {photoPreview && (
+                <div className="relative overflow-hidden rounded-2xl border border-border/60">
+                  <img src={photoPreview} alt="Preview" className="max-h-64 w-full object-cover" />
+                  <Button
+                    type="button"
+                    size="icon"
+                    variant="secondary"
+                    className="absolute right-2 top-2 h-8 w-8"
+                    onClick={() => setPhoto(null)}
+                    aria-label="Remove photo"
+                  >
+                    <X className="h-4 w-4" />
+                  </Button>
+                </div>
+              )}
+
+              {/* Voice preview */}
+              {voice.url && !voice.recording && (
+                <div className="flex items-center gap-2 rounded-2xl border border-border/60 p-2">
+                  <audio controls src={voice.url} className="flex-1" />
+                  <Button
+                    type="button"
+                    size="icon"
+                    variant="ghost"
+                    onClick={voice.reset}
+                    aria-label="Discard recording"
+                  >
+                    <X className="h-4 w-4" />
+                  </Button>
+                </div>
+              )}
+
+              {voice.recording && (
+                <div className="flex items-center gap-3 rounded-2xl bg-destructive/10 p-3 text-sm text-destructive">
+                  <span className="inline-block h-2.5 w-2.5 animate-pulse rounded-full bg-destructive" />
+                  Recording… {String(Math.floor(voice.elapsed / 60)).padStart(1, "0")}:
+                  {String(voice.elapsed % 60).padStart(2, "0")}
+                </div>
+              )}
+
+              {/* Hidden file inputs */}
+              <input
+                ref={photoInputRef}
+                type="file"
+                accept="image/*"
+                className="hidden"
+                onChange={(e) => {
+                  const f = e.target.files?.[0];
+                  if (f) setPhoto(f);
+                }}
+              />
+              <input
+                ref={cameraInputRef}
+                type="file"
+                accept="image/*"
+                capture="environment"
+                className="hidden"
+                onChange={(e) => {
+                  const f = e.target.files?.[0];
+                  if (f) setPhoto(f);
+                }}
+              />
+
+              <div className="flex flex-wrap items-center gap-2">
                 <Button
-                  type="submit"
-                  disabled={send.isPending || !text.trim() || !childId}
-                  className="bg-gradient-primary text-primary-foreground border-0 shadow-pop"
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={() => photoInputRef.current?.click()}
                 >
-                  <Send className="h-4 w-4" /> Send
+                  <ImageIcon className="h-4 w-4" /> Photo
                 </Button>
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={() => cameraInputRef.current?.click()}
+                >
+                  <Camera className="h-4 w-4" /> Camera
+                </Button>
+                {!voice.recording ? (
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    onClick={voice.start}
+                  >
+                    <Mic className="h-4 w-4" /> {voice.blob ? "Re-record" : "Record"}
+                  </Button>
+                ) : (
+                  <Button
+                    type="button"
+                    variant="destructive"
+                    size="sm"
+                    onClick={voice.stop}
+                  >
+                    <Square className="h-4 w-4" /> Stop
+                  </Button>
+                )}
+
+                <div className="ml-auto">
+                  <Button
+                    type="submit"
+                    disabled={
+                      send.isPending || uploading || !hasContent || !childId || voice.recording
+                    }
+                    className="bg-gradient-primary text-primary-foreground border-0 shadow-pop"
+                  >
+                    <Send className="h-4 w-4" />
+                    {uploading || send.isPending ? "Sending…" : "Send"}
+                  </Button>
+                </div>
               </div>
             </form>
           </section>
@@ -253,8 +547,7 @@ function ParentWall() {
                 {messages.map((m, i) => (
                   <MessageCard
                     key={m.id}
-                    message={m.message}
-                    createdAt={m.created_at}
+                    m={m}
                     index={i}
                     onDelete={() => {
                       if (confirm("Delete this message?")) del.mutate(m.id);
