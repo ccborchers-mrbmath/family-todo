@@ -267,10 +267,7 @@ function ParentWall() {
   const qc = useQueryClient();
   const { data: me } = useQuery({ queryKey: ["me"], queryFn: () => getMe() });
   const { data: family } = useQuery({ queryKey: ["family"], queryFn: () => listFamilyData() });
-  const kids = useMemo(
-    () => (family?.members ?? []).filter((m) => m.role === "kid"),
-    [family],
-  );
+  const kids = useMemo(() => (family?.members ?? []).filter((m) => m.role === "kid"), [family]);
   const familyId = me?.profile?.family_id ?? null;
 
   const [childId, setChildId] = useState<string | null>(null);
