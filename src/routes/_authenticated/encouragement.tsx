@@ -2,13 +2,14 @@ import { createFileRoute } from "@tanstack/react-router";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useEffect, useState, useMemo, useRef } from "react";
 import { motion } from "framer-motion";
-import { Heart, Sparkles, Send, Trash2, Image as ImageIcon, Mic, Square, X, Camera } from "lucide-react";
+import { Heart, Sparkles, Send, Trash2, Image as ImageIcon, Mic, Square, X, Camera, Wand2, Loader2 } from "lucide-react";
 import { getMe, listFamilyData } from "@/lib/family.functions";
 import {
   listEncouragement,
   sendEncouragement,
   deleteEncouragement,
 } from "@/lib/encouragement.functions";
+import { transcribeVoice } from "@/lib/transcribe.functions";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
