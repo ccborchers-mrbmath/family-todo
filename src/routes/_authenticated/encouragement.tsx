@@ -481,17 +481,43 @@ function ParentWall() {
 
               {/* Voice preview */}
               {voice.url && !voice.recording && (
-                <div className="flex items-center gap-2 rounded-2xl border border-border/60 p-2">
-                  <audio controls src={voice.url} className="flex-1" />
-                  <Button
-                    type="button"
-                    size="icon"
-                    variant="ghost"
-                    onClick={voice.reset}
-                    aria-label="Discard recording"
-                  >
-                    <X className="h-4 w-4" />
-                  </Button>
+                <div className="space-y-2 rounded-2xl border border-border/60 p-2">
+                  <div className="flex items-center gap-2">
+                    <audio controls src={voice.url} className="flex-1" />
+                    <Button
+                      type="button"
+                      size="icon"
+                      variant="ghost"
+                      onClick={() => {
+                        lastTranscribedRef.current = null;
+                        voice.reset();
+                      }}
+                      aria-label="Discard recording"
+                    >
+                      <X className="h-4 w-4" />
+                    </Button>
+                  </div>
+                  <div className="flex items-center justify-between px-1">
+                    {transcribing ? (
+                      <span className="flex items-center gap-2 text-xs text-muted-foreground">
+                        <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                        Transcribing your voice note…
+                      </span>
+                    ) : (
+                      <span className="text-xs text-muted-foreground">
+                        Voice note attached — transcript added to your message
+                      </span>
+                    )}
+                    <Button
+                      type="button"
+                      size="sm"
+                      variant="ghost"
+                      disabled={transcribing || !voice.blob}
+                      onClick={() => voice.blob && runTranscription(voice.blob)}
+                    >
+                      <Wand2 className="h-3.5 w-3.5" /> Re-transcribe
+                    </Button>
+                  </div>
                 </div>
               )}
 
