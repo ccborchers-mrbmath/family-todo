@@ -285,6 +285,48 @@ function ParentWall() {
   const cameraInputRef = useRef<HTMLInputElement>(null);
   const voice = useVoiceRecorder();
   const [uploading, setUploading] = useState(false);
+  const [transcribing, setTranscribing] = useState(false);
+  const lastTranscribedRef = useRef<Blob | null>(null);
+
+  const runTranscription = async (blob: Blob) => {
+    setTranscribing(true);
+    try {
+      const buf = await blob.arrayBuffer();
+      let binary = "";
+      const bytes = new Uint8Array(buf);
+      const chunk = 0x8000;
+      for (let i = 0; i < bytes.length; i += chunk) {
+        binary += String.fromCharCode(...bytes.subarray(i, i + chunk));
+      }
+      const audioBase64 = btoa(binary);
+      const { text: transcript } = await transcribeVoice({
+        data: { audioBase64, mime: blob.type || "audio/webm" },
+      });
+      if (transcript) {
+        setText((prev) => {
+          const combined = prev.trim() ? `${prev.trim()}\n\n${transcript}` : transcript;
+          return combined.slice(0, MAX_MESSAGE);
+        });
+        toast.success("Voice note transcribed");
+      } else {
+        toast.info("Couldn't hear any speech in that recording.");
+      }
+    } catch (e) {
+      toast.error((e as Error).message);
+    } finally {
+      setTranscribing(false);
+    }
+  };
+
+  // Auto-transcribe each new recording once
+  useEffect(() => {
+    if (voice.blob && voice.blob !== lastTranscribedRef.current && !voice.recording) {
+      lastTranscribedRef.current = voice.blob;
+      void runTranscription(voice.blob);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [voice.blob, voice.recording]);
+
 
   useEffect(() => {
     if (!childId && kids.length > 0) setChildId(kids[0].id);
