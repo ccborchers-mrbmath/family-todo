@@ -288,6 +288,11 @@ function ParentWall() {
   const [transcribing, setTranscribing] = useState(false);
   const lastTranscribedRef = useRef<Blob | null>(null);
 
+  const selectedKid = useMemo(
+    () => kids.find((k) => k.id === childId) ?? null,
+    [kids, childId],
+  );
+
   const runTranscription = async (blob: Blob) => {
     setTranscribing(true);
     try {
@@ -300,7 +305,11 @@ function ParentWall() {
       }
       const audioBase64 = btoa(binary);
       const { text: transcript } = await transcribeVoice({
-        data: { audioBase64, mime: blob.type || "audio/webm" },
+        data: {
+          audioBase64,
+          mime: blob.type || "audio/webm",
+          childName: selectedKid?.display_name ?? undefined,
+        },
       });
       if (transcript) {
         setText((prev) => {
