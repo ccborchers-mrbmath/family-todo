@@ -85,28 +85,34 @@ export type Database = {
       }
       encouragement_messages: {
         Row: {
+          audio_path: string | null
           author_id: string
           child_id: string
           created_at: string
           family_id: string
           id: string
-          message: string
+          image_path: string | null
+          message: string | null
         }
         Insert: {
+          audio_path?: string | null
           author_id: string
           child_id: string
           created_at?: string
           family_id: string
           id?: string
-          message: string
+          image_path?: string | null
+          message?: string | null
         }
         Update: {
+          audio_path?: string | null
           author_id?: string
           child_id?: string
           created_at?: string
           family_id?: string
           id?: string
-          message?: string
+          image_path?: string | null
+          message?: string | null
         }
         Relationships: [
           {
