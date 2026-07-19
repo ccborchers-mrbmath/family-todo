@@ -472,6 +472,7 @@ function ActiveTaskSummary({
         show={showToday}
         onToggle={setShowToday}
         tasks={today}
+        memberMap={memberMap}
         onCheck={(id, c) => toggle.mutate({ id, completed: c })}
       />
       <SummaryGroup
@@ -480,6 +481,7 @@ function ActiveTaskSummary({
         show={showWeek}
         onToggle={setShowWeek}
         tasks={thisWeek}
+        memberMap={memberMap}
         onCheck={(id, c) => toggle.mutate({ id, completed: c })}
       />
       <SummaryGroup
@@ -488,11 +490,13 @@ function ActiveTaskSummary({
         show={showLong}
         onToggle={setShowLong}
         tasks={longTerm}
+        memberMap={memberMap}
         onCheck={(id, c) => toggle.mutate({ id, completed: c })}
       />
     </div>
   );
 }
+
 
 function SummaryGroup({
   label,
