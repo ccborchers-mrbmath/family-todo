@@ -102,7 +102,7 @@ function HomeManagementPage() {
   }, [data]);
 
   const tasksBySection = useMemo(() => {
-    const m = new Map<string, typeof data.tasks>();
+    const m = new Map<string, any[]>();
     for (const t of data?.tasks ?? []) {
       const arr = m.get(t.section_key) ?? [];
       arr.push(t);
@@ -149,17 +149,24 @@ function SectionBlock({
   tasksBySection: Map<string, any[]>;
   onChanged: () => void;
 }) {
-  const HeadingTag = (`h${Math.min(node.level, 6)}` as unknown) as keyof JSX.IntrinsicElements;
   const headingClass =
     node.level === 2
       ? "text-2xl font-display font-bold tracking-tight"
       : node.level === 3
         ? "text-xl font-display font-semibold"
         : "text-lg font-semibold";
+  const heading =
+    node.level === 2 ? (
+      <h2 className={headingClass}>{node.title}</h2>
+    ) : node.level === 3 ? (
+      <h3 className={headingClass}>{node.title}</h3>
+    ) : (
+      <h4 className={headingClass}>{node.title}</h4>
+    );
 
   return (
     <section className="space-y-4">
-      <HeadingTag className={headingClass}>{node.title}</HeadingTag>
+      {heading}
       {node.key && (node.vision || node.tasks) && (
         <div className="rounded-2xl border border-border/60 bg-card p-4 space-y-4">
           {node.vision && <VisionEditor sectionKey={node.key} initial={visionMap.get(node.key) ?? ""} onSaved={onChanged} />}
