@@ -221,13 +221,13 @@ function VisionEditor({
   return (
     <div className="space-y-2">
       <div className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Vision</div>
-      <Textarea
+      <SmartField
+        as="textarea"
         value={value}
-        onChange={(e) => setValue(e.target.value)}
+        onChange={setValue}
         onBlur={() => value !== initial && save.mutate()}
         placeholder="Describe the vision for this area…"
         rows={3}
-        className="resize-y"
       />
       <div className="flex items-center justify-between text-xs text-muted-foreground">
         <span>{saved ? "Saved" : "Auto-saves when you click away"}</span>
