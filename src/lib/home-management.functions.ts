@@ -150,7 +150,16 @@ export const deleteHomeTask = createServerFn({ method: "POST" })
   .handler(async ({ context, data }) => {
     const { supabase, userId } = context;
     await ensureParentFamily(supabase, userId);
+    const { data: existing } = await supabase
+      .from("home_management_tasks")
+      .select("linked_task_id")
+      .eq("id", data.id)
+      .maybeSingle();
     const { error } = await supabase.from("home_management_tasks").delete().eq("id", data.id);
     if (error) throw error;
+    if (existing?.linked_task_id) {
+      await supabase.from("tasks").delete().eq("id", existing.linked_task_id);
+    }
     return { ok: true };
   });
+
