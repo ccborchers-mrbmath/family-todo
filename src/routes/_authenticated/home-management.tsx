@@ -338,6 +338,21 @@ function TaskListEditor({
     onError: (e) => toast.error((e as Error).message),
   });
 
+  const update = useMutation({
+    mutationFn: (v: {
+      id: string;
+      title: string;
+      timeframe: string | null;
+      dueDate: string | null;
+      assigneeId: string | null;
+    }) => updateHomeTask({ data: v }),
+    onSuccess: () => {
+      toast.success("Task updated");
+      onChanged();
+    },
+    onError: (e) => toast.error((e as Error).message),
+  });
+
   const active = tasks.filter((t) => !t.completed);
   const completed = tasks.filter((t) => t.completed);
 
