@@ -130,6 +130,104 @@ export const addHomeTask = createServerFn({ method: "POST" })
   });
 
 
+export const updateHomeTask = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((data) =>
+    z
+      .object({
+        id: uuid,
+        title: z.string().trim().min(1).max(300),
+        timeframe: z.string().trim().max(100).optional().nullable(),
+        dueDate: z
+          .string()
+          .regex(/^\d{4}-\d{2}-\d{2}$/)
+          .optional()
+          .nullable(),
+        assigneeId: uuid.optional().nullable(),
+      })
+      .parse(data),
+  )
+  .handler(async ({ context, data }) => {
+    const { supabase, userId } = context;
+    const familyId = await ensureParentFamily(supabase, userId);
+
+    const { data: existing, error: exErr } = await supabase
+      .from("home_management_tasks")
+      .select("*")
+      .eq("id", data.id)
+      .eq("family_id", familyId)
+      .maybeSingle();
+    if (exErr) throw exErr;
+    if (!existing) throw new Error("Task not found");
+
+    const newAssignee = data.assigneeId ?? null;
+    const shouldMirror = !!newAssignee && newAssignee !== userId;
+    let linkedTaskId: string | null = existing.linked_task_id ?? null;
+    const today = new Date().toISOString().slice(0, 10);
+    const dueDate = data.dueDate ?? today;
+
+    if (shouldMirror) {
+      // Verify assignee is in family
+      const { data: member } = await supabase
+        .from("profiles")
+        .select("id")
+        .eq("id", newAssignee)
+        .eq("family_id", familyId)
+        .maybeSingle();
+      if (!member) throw new Error("Assignee is not in your family.");
+
+      if (linkedTaskId) {
+        const { error: uErr } = await supabase
+          .from("tasks")
+          .update({
+            assignee_id: newAssignee,
+            title: data.title,
+            description: data.timeframe ?? null,
+            start_date: dueDate,
+            end_date: dueDate,
+          })
+          .eq("id", linkedTaskId);
+        if (uErr) throw uErr;
+      } else {
+        const { data: task, error: tErr } = await supabase
+          .from("tasks")
+          .insert({
+            family_id: familyId,
+            assignee_id: newAssignee,
+            created_by: userId,
+            title: data.title,
+            description: data.timeframe ?? null,
+            recurrence_type: "once",
+            recurrence_config: {} as never,
+            start_date: dueDate,
+            end_date: dueDate,
+            reward_amount: 0,
+          })
+          .select("id")
+          .single();
+        if (tErr) throw tErr;
+        linkedTaskId = task.id;
+      }
+    } else if (linkedTaskId) {
+      // Assignee removed or reassigned to self — remove mirror
+      await supabase.from("tasks").delete().eq("id", linkedTaskId);
+      linkedTaskId = null;
+    }
+
+    const { error } = await supabase
+      .from("home_management_tasks")
+      .update({
+        title: data.title,
+        timeframe: data.timeframe ?? null,
+        due_date: data.dueDate ?? null,
+        assignee_id: newAssignee,
+        linked_task_id: linkedTaskId,
+      })
+      .eq("id", data.id);
+    if (error) throw error;
+    return { ok: true };
+  });
+
 export const toggleHomeTask = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((data) => z.object({ id: uuid, completed: z.boolean() }).parse(data))
