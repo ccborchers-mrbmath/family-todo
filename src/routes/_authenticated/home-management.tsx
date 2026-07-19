@@ -287,15 +287,22 @@ function VisionEditor({
 function TaskListEditor({
   sectionKey,
   tasks,
+  members,
+  memberMap,
+  meId,
   onChanged,
 }: {
   sectionKey: string;
   tasks: any[];
+  members: FamilyMember[];
+  memberMap: Map<string, FamilyMember>;
+  meId: string;
   onChanged: () => void;
 }) {
   const [title, setTitle] = useState("");
   const [timeframe, setTimeframe] = useState("");
   const [dueDate, setDueDate] = useState("");
+  const [assigneeId, setAssigneeId] = useState<string>(UNASSIGNED);
 
   const add = useMutation({
     mutationFn: () =>
@@ -305,12 +312,14 @@ function TaskListEditor({
           title: title.trim(),
           timeframe: timeframe.trim() || null,
           dueDate: dueDate || null,
+          assigneeId: assigneeId === UNASSIGNED ? null : assigneeId,
         },
       }),
     onSuccess: () => {
       setTitle("");
       setTimeframe("");
       setDueDate("");
+      setAssigneeId(UNASSIGNED);
       onChanged();
     },
     onError: (e) => toast.error((e as Error).message),
@@ -355,6 +364,19 @@ function TaskListEditor({
           className="sm:w-44"
           aria-label="Due date"
         />
+        <Select value={assigneeId} onValueChange={setAssigneeId}>
+          <SelectTrigger className="sm:w-48" aria-label="Assign to">
+            <SelectValue placeholder="Assign to…" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value={UNASSIGNED}>Unassigned (me)</SelectItem>
+            {members.map((m) => (
+              <SelectItem key={m.id} value={m.id}>
+                {(m.display_name || m.email || "Member") + (m.id === meId ? " (me)" : "")}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
         <Button
           onClick={() => title.trim() && add.mutate()}
           disabled={!title.trim() || add.isPending}
@@ -370,15 +392,16 @@ function TaskListEditor({
           <TabsTrigger value="completed">Completed ({completed.length})</TabsTrigger>
         </TabsList>
         <TabsContent value="active" className="mt-3">
-          <TaskRows rows={active} onToggle={(id, c) => toggle.mutate({ id, completed: c })} onDelete={(id) => del.mutate(id)} />
+          <TaskRows rows={active} memberMap={memberMap} onToggle={(id, c) => toggle.mutate({ id, completed: c })} onDelete={(id) => del.mutate(id)} />
         </TabsContent>
         <TabsContent value="completed" className="mt-3">
-          <TaskRows rows={completed} onToggle={(id, c) => toggle.mutate({ id, completed: c })} onDelete={(id) => del.mutate(id)} />
+          <TaskRows rows={completed} memberMap={memberMap} onToggle={(id, c) => toggle.mutate({ id, completed: c })} onDelete={(id) => del.mutate(id)} />
         </TabsContent>
       </Tabs>
     </div>
   );
 }
+
 
 function ActiveTaskSummary({
   tasks,
