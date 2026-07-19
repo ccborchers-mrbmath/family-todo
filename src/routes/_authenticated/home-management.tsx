@@ -405,11 +405,14 @@ function TaskListEditor({
 
 function ActiveTaskSummary({
   tasks,
+  memberMap,
   onChanged,
 }: {
   tasks: any[];
+  memberMap: Map<string, FamilyMember>;
   onChanged: () => void;
 }) {
+
   const [showToday, setShowToday] = useState(true);
   const [showWeek, setShowWeek] = useState(true);
   const [showLong, setShowLong] = useState(true);
