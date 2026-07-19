@@ -186,6 +186,85 @@ export type Database = {
           },
         ]
       }
+      home_management_tasks: {
+        Row: {
+          completed: boolean
+          completed_at: string | null
+          created_at: string
+          family_id: string
+          id: string
+          section_key: string
+          timeframe: string | null
+          title: string
+          updated_at: string
+        }
+        Insert: {
+          completed?: boolean
+          completed_at?: string | null
+          created_at?: string
+          family_id: string
+          id?: string
+          section_key: string
+          timeframe?: string | null
+          title: string
+          updated_at?: string
+        }
+        Update: {
+          completed?: boolean
+          completed_at?: string | null
+          created_at?: string
+          family_id?: string
+          id?: string
+          section_key?: string
+          timeframe?: string | null
+          title?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "home_management_tasks_family_id_fkey"
+            columns: ["family_id"]
+            isOneToOne: false
+            referencedRelation: "families"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      home_management_visions: {
+        Row: {
+          content: string
+          created_at: string
+          family_id: string
+          id: string
+          section_key: string
+          updated_at: string
+        }
+        Insert: {
+          content?: string
+          created_at?: string
+          family_id: string
+          id?: string
+          section_key: string
+          updated_at?: string
+        }
+        Update: {
+          content?: string
+          created_at?: string
+          family_id?: string
+          id?: string
+          section_key?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "home_management_visions_family_id_fkey"
+            columns: ["family_id"]
+            isOneToOne: false
+            referencedRelation: "families"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       notification_prefs: {
         Row: {
           created_at: string
