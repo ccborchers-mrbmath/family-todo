@@ -169,28 +169,34 @@ function HomeManagementPage() {
       {isLoading ? (
         <div className="text-sm text-muted-foreground">Loading…</div>
       ) : (
-        <div className="space-y-8">
-          {STRUCTURE.map((node, idx) => (
-            <div key={node.title} className="space-y-6">
-              <SectionBlock
-                node={node}
-                visionMap={visionMap}
-                tasksBySection={tasksBySection}
-                members={members}
-                memberMap={memberMap}
-                meId={me?.profile?.id ?? ""}
-                onChanged={() => qc.invalidateQueries({ queryKey: ["home-management"] })}
-              />
-              {idx === 0 && (
-                <ActiveTaskSummary
-                  tasks={data?.tasks ?? []}
-                  memberMap={memberMap}
-                  onChanged={() => qc.invalidateQueries({ queryKey: ["home-management"] })}
-                />
-              )}
-            </div>
-          ))}
-        </div>
+        <SectionCollapseContext.Provider value={collapseCtx}>
+          <div className="space-y-8">
+            {STRUCTURE.map((node, idx) => {
+              const key = node.key ?? slugify(node.title);
+              return (
+                <div key={key} className="space-y-6">
+                  <SectionBlock
+                    node={node}
+                    sectionKey={key}
+                    visionMap={visionMap}
+                    tasksBySection={tasksBySection}
+                    members={members}
+                    memberMap={memberMap}
+                    meId={me?.profile?.id ?? ""}
+                    onChanged={() => qc.invalidateQueries({ queryKey: ["home-management"] })}
+                  />
+                  {idx === 0 && !collapseCtx.isCollapsed(key) && (
+                    <ActiveTaskSummary
+                      tasks={data?.tasks ?? []}
+                      memberMap={memberMap}
+                      onChanged={() => qc.invalidateQueries({ queryKey: ["home-management"] })}
+                    />
+                  )}
+                </div>
+              );
+            })}
+          </div>
+        </SectionCollapseContext.Provider>
       )}
     </div>
   );
