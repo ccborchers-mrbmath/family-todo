@@ -188,36 +188,42 @@ export type Database = {
       }
       home_management_tasks: {
         Row: {
+          assignee_id: string | null
           completed: boolean
           completed_at: string | null
           created_at: string
           due_date: string | null
           family_id: string
           id: string
+          linked_task_id: string | null
           section_key: string
           timeframe: string | null
           title: string
           updated_at: string
         }
         Insert: {
+          assignee_id?: string | null
           completed?: boolean
           completed_at?: string | null
           created_at?: string
           due_date?: string | null
           family_id: string
           id?: string
+          linked_task_id?: string | null
           section_key: string
           timeframe?: string | null
           title: string
           updated_at?: string
         }
         Update: {
+          assignee_id?: string | null
           completed?: boolean
           completed_at?: string | null
           created_at?: string
           due_date?: string | null
           family_id?: string
           id?: string
+          linked_task_id?: string | null
           section_key?: string
           timeframe?: string | null
           title?: string
@@ -225,10 +231,24 @@ export type Database = {
         }
         Relationships: [
           {
+            foreignKeyName: "home_management_tasks_assignee_id_fkey"
+            columns: ["assignee_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "home_management_tasks_family_id_fkey"
             columns: ["family_id"]
             isOneToOne: false
             referencedRelation: "families"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "home_management_tasks_linked_task_id_fkey"
+            columns: ["linked_task_id"]
+            isOneToOne: false
+            referencedRelation: "tasks"
             referencedColumns: ["id"]
           },
         ]

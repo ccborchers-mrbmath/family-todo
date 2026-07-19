@@ -1,14 +1,15 @@
 import { createFileRoute, redirect } from "@tanstack/react-router";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useEffect, useMemo, useState } from "react";
-import { Plus, Trash2, Check, ChevronDown, ChevronUp } from "lucide-react";
+import { Plus, Trash2, Check, ChevronDown, ChevronUp, User } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Switch } from "@/components/ui/switch";
 import { Input } from "@/components/ui/input";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { SmartField } from "@/components/SmartField";
-import { getMe } from "@/lib/family.functions";
+import { getMe, listFamilyData } from "@/lib/family.functions";
 import {
   listHomeManagement,
   saveVision,
@@ -17,6 +18,10 @@ import {
   deleteHomeTask,
 } from "@/lib/home-management.functions";
 import { toast } from "sonner";
+
+type FamilyMember = { id: string; display_name: string | null; email: string | null; role?: string | null };
+const UNASSIGNED = "__unassigned__";
+
 
 export const Route = createFileRoute("/_authenticated/home-management")({
   head: () => ({ meta: [{ title: "Home Management · Kinquest" }] }),
@@ -80,10 +85,14 @@ function HomeManagementPage() {
     queryFn: () => listHomeManagement(),
     enabled: me?.role === "parent",
   });
+  const { data: family } = useQuery({
+    queryKey: ["family"],
+    queryFn: () => listFamilyData(),
+    enabled: me?.role === "parent",
+  });
 
   useEffect(() => {
     if (me && me.role !== "parent") {
-      // Kids should never see this page
       throw redirect({ to: "/dashboard" });
     }
   }, [me]);
@@ -95,6 +104,13 @@ function HomeManagementPage() {
       </div>
     );
   }
+
+  const members: FamilyMember[] = (family?.members ?? []) as FamilyMember[];
+  const memberMap = useMemo(() => {
+    const m = new Map<string, FamilyMember>();
+    for (const mem of members) m.set(mem.id, mem);
+    return m;
+  }, [members]);
 
   const visionMap = useMemo(() => {
     const m = new Map<string, string>();
@@ -130,11 +146,15 @@ function HomeManagementPage() {
                 node={node}
                 visionMap={visionMap}
                 tasksBySection={tasksBySection}
+                members={members}
+                memberMap={memberMap}
+                meId={me?.profile?.id ?? ""}
                 onChanged={() => qc.invalidateQueries({ queryKey: ["home-management"] })}
               />
               {idx === 0 && (
                 <ActiveTaskSummary
                   tasks={data?.tasks ?? []}
+                  memberMap={memberMap}
                   onChanged={() => qc.invalidateQueries({ queryKey: ["home-management"] })}
                 />
               )}
@@ -146,15 +166,22 @@ function HomeManagementPage() {
   );
 }
 
+
 function SectionBlock({
   node,
   visionMap,
   tasksBySection,
+  members,
+  memberMap,
+  meId,
   onChanged,
 }: {
   node: SectionNode;
   visionMap: Map<string, string>;
   tasksBySection: Map<string, any[]>;
+  members: FamilyMember[];
+  memberMap: Map<string, FamilyMember>;
+  meId: string;
   onChanged: () => void;
 }) {
   const headingClass =
@@ -182,6 +209,9 @@ function SectionBlock({
             <TaskListEditor
               sectionKey={node.key}
               tasks={tasksBySection.get(node.key) ?? []}
+              members={members}
+              memberMap={memberMap}
+              meId={meId}
               onChanged={onChanged}
             />
           )}
@@ -195,6 +225,9 @@ function SectionBlock({
               node={child}
               visionMap={visionMap}
               tasksBySection={tasksBySection}
+              members={members}
+              memberMap={memberMap}
+              meId={meId}
               onChanged={onChanged}
             />
           ))}
@@ -203,6 +236,7 @@ function SectionBlock({
     </section>
   );
 }
+
 
 function VisionEditor({
   sectionKey,
@@ -253,15 +287,22 @@ function VisionEditor({
 function TaskListEditor({
   sectionKey,
   tasks,
+  members,
+  memberMap,
+  meId,
   onChanged,
 }: {
   sectionKey: string;
   tasks: any[];
+  members: FamilyMember[];
+  memberMap: Map<string, FamilyMember>;
+  meId: string;
   onChanged: () => void;
 }) {
   const [title, setTitle] = useState("");
   const [timeframe, setTimeframe] = useState("");
   const [dueDate, setDueDate] = useState("");
+  const [assigneeId, setAssigneeId] = useState<string>(UNASSIGNED);
 
   const add = useMutation({
     mutationFn: () =>
@@ -271,12 +312,14 @@ function TaskListEditor({
           title: title.trim(),
           timeframe: timeframe.trim() || null,
           dueDate: dueDate || null,
+          assigneeId: assigneeId === UNASSIGNED ? null : assigneeId,
         },
       }),
     onSuccess: () => {
       setTitle("");
       setTimeframe("");
       setDueDate("");
+      setAssigneeId(UNASSIGNED);
       onChanged();
     },
     onError: (e) => toast.error((e as Error).message),
@@ -321,6 +364,19 @@ function TaskListEditor({
           className="sm:w-44"
           aria-label="Due date"
         />
+        <Select value={assigneeId} onValueChange={setAssigneeId}>
+          <SelectTrigger className="sm:w-48" aria-label="Assign to">
+            <SelectValue placeholder="Assign to…" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value={UNASSIGNED}>Unassigned (me)</SelectItem>
+            {members.map((m) => (
+              <SelectItem key={m.id} value={m.id}>
+                {(m.display_name || m.email || "Member") + (m.id === meId ? " (me)" : "")}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
         <Button
           onClick={() => title.trim() && add.mutate()}
           disabled={!title.trim() || add.isPending}
@@ -336,23 +392,27 @@ function TaskListEditor({
           <TabsTrigger value="completed">Completed ({completed.length})</TabsTrigger>
         </TabsList>
         <TabsContent value="active" className="mt-3">
-          <TaskRows rows={active} onToggle={(id, c) => toggle.mutate({ id, completed: c })} onDelete={(id) => del.mutate(id)} />
+          <TaskRows rows={active} memberMap={memberMap} onToggle={(id, c) => toggle.mutate({ id, completed: c })} onDelete={(id) => del.mutate(id)} />
         </TabsContent>
         <TabsContent value="completed" className="mt-3">
-          <TaskRows rows={completed} onToggle={(id, c) => toggle.mutate({ id, completed: c })} onDelete={(id) => del.mutate(id)} />
+          <TaskRows rows={completed} memberMap={memberMap} onToggle={(id, c) => toggle.mutate({ id, completed: c })} onDelete={(id) => del.mutate(id)} />
         </TabsContent>
       </Tabs>
     </div>
   );
 }
 
+
 function ActiveTaskSummary({
   tasks,
+  memberMap,
   onChanged,
 }: {
   tasks: any[];
+  memberMap: Map<string, FamilyMember>;
   onChanged: () => void;
 }) {
+
   const [showToday, setShowToday] = useState(true);
   const [showWeek, setShowWeek] = useState(true);
   const [showLong, setShowLong] = useState(true);
@@ -412,6 +472,7 @@ function ActiveTaskSummary({
         show={showToday}
         onToggle={setShowToday}
         tasks={today}
+        memberMap={memberMap}
         onCheck={(id, c) => toggle.mutate({ id, completed: c })}
       />
       <SummaryGroup
@@ -420,6 +481,7 @@ function ActiveTaskSummary({
         show={showWeek}
         onToggle={setShowWeek}
         tasks={thisWeek}
+        memberMap={memberMap}
         onCheck={(id, c) => toggle.mutate({ id, completed: c })}
       />
       <SummaryGroup
@@ -428,11 +490,13 @@ function ActiveTaskSummary({
         show={showLong}
         onToggle={setShowLong}
         tasks={longTerm}
+        memberMap={memberMap}
         onCheck={(id, c) => toggle.mutate({ id, completed: c })}
       />
     </div>
   );
 }
+
 
 function SummaryGroup({
   label,
@@ -440,6 +504,7 @@ function SummaryGroup({
   show,
   onToggle,
   tasks,
+  memberMap,
   onCheck,
 }: {
   label: string;
@@ -447,6 +512,7 @@ function SummaryGroup({
   show: boolean;
   onToggle: (v: boolean) => void;
   tasks: any[];
+  memberMap: Map<string, FamilyMember>;
   onCheck: (id: string, completed: boolean) => void;
 }) {
   return (
@@ -467,26 +533,35 @@ function SummaryGroup({
             </div>
           ) : (
             <ul className="space-y-1.5">
-              {tasks.map((t) => (
-                <li
-                  key={t.id}
-                  className="flex items-center gap-3 rounded-lg border border-border/40 bg-background/60 px-3 py-2"
-                >
-                  <Checkbox
-                    checked={t.completed}
-                    onCheckedChange={(v) => onCheck(t.id, !!v)}
-                    aria-label="Toggle complete"
-                  />
-                  <div className="min-w-0 flex-1">
-                    <div className="text-sm truncate">{t.title}</div>
-                  </div>
-                  {t.due_date && (
-                    <div className="text-[11px] text-accent font-medium whitespace-nowrap">
-                      {formatDueDate(t.due_date)}
+              {tasks.map((t) => {
+                const assignee = t.assignee_id ? memberMap.get(t.assignee_id) : null;
+                return (
+                  <li
+                    key={t.id}
+                    className="flex items-center gap-3 rounded-lg border border-border/40 bg-background/60 px-3 py-2"
+                  >
+                    <Checkbox
+                      checked={t.completed}
+                      onCheckedChange={(v) => onCheck(t.id, !!v)}
+                      aria-label="Toggle complete"
+                    />
+                    <div className="min-w-0 flex-1">
+                      <div className="text-sm truncate">{t.title}</div>
+                      {assignee && (
+                        <div className="text-[11px] text-muted-foreground flex items-center gap-1 mt-0.5">
+                          <User className="h-3 w-3" />
+                          {assignee.display_name || assignee.email}
+                        </div>
+                      )}
                     </div>
-                  )}
-                </li>
-              ))}
+                    {t.due_date && (
+                      <div className="text-[11px] text-accent font-medium whitespace-nowrap">
+                        {formatDueDate(t.due_date)}
+                      </div>
+                    )}
+                  </li>
+                );
+              })}
             </ul>
           )}
         </div>
@@ -501,12 +576,15 @@ function formatDueDate(d: string) {
   return dt.toLocaleDateString(undefined, { month: "short", day: "numeric" });
 }
 
+
 function TaskRows({
   rows,
+  memberMap,
   onToggle,
   onDelete,
 }: {
   rows: any[];
+  memberMap: Map<string, FamilyMember>;
   onToggle: (id: string, completed: boolean) => void;
   onDelete: (id: string) => void;
 }) {
@@ -519,28 +597,40 @@ function TaskRows({
   }
   return (
     <ul className="space-y-2">
-      {rows.map((t) => (
-        <li
-          key={t.id}
-          className="flex items-center gap-3 rounded-xl border border-border/60 bg-background/40 px-3 py-2"
-        >
-          <Checkbox
-            checked={t.completed}
-            onCheckedChange={(v) => onToggle(t.id, !!v)}
-            aria-label="Toggle complete"
-          />
-          <div className="min-w-0 flex-1">
-            <div className={`text-sm ${t.completed ? "line-through text-muted-foreground" : ""}`}>{t.title}</div>
-            {t.timeframe && (
-              <div className="text-[11px] text-accent font-medium mt-0.5">{t.timeframe}</div>
-            )}
-          </div>
-          {t.completed && <Check className="h-4 w-4 text-green-500" />}
-          <Button variant="ghost" size="icon" onClick={() => onDelete(t.id)} aria-label="Delete task">
-            <Trash2 className="h-4 w-4 text-destructive" />
-          </Button>
-        </li>
-      ))}
+      {rows.map((t) => {
+        const assignee = t.assignee_id ? memberMap.get(t.assignee_id) : null;
+        return (
+          <li
+            key={t.id}
+            className="flex items-center gap-3 rounded-xl border border-border/60 bg-background/40 px-3 py-2"
+          >
+            <Checkbox
+              checked={t.completed}
+              onCheckedChange={(v) => onToggle(t.id, !!v)}
+              aria-label="Toggle complete"
+            />
+            <div className="min-w-0 flex-1">
+              <div className={`text-sm ${t.completed ? "line-through text-muted-foreground" : ""}`}>{t.title}</div>
+              <div className="flex items-center gap-3 mt-0.5">
+                {t.timeframe && (
+                  <div className="text-[11px] text-accent font-medium">{t.timeframe}</div>
+                )}
+                {assignee && (
+                  <div className="text-[11px] text-muted-foreground flex items-center gap-1">
+                    <User className="h-3 w-3" />
+                    {assignee.display_name || assignee.email}
+                  </div>
+                )}
+              </div>
+            </div>
+            {t.completed && <Check className="h-4 w-4 text-green-500" />}
+            <Button variant="ghost" size="icon" onClick={() => onDelete(t.id)} aria-label="Delete task">
+              <Trash2 className="h-4 w-4 text-destructive" />
+            </Button>
+          </li>
+        );
+      })}
     </ul>
   );
 }
+

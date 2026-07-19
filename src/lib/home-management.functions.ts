@@ -70,12 +70,48 @@ export const addHomeTask = createServerFn({ method: "POST" })
           .regex(/^\d{4}-\d{2}-\d{2}$/)
           .optional()
           .nullable(),
+        assigneeId: uuid.optional().nullable(),
       })
       .parse(data),
   )
   .handler(async ({ context, data }) => {
     const { supabase, userId } = context;
     const familyId = await ensureParentFamily(supabase, userId);
+
+    // If assigned to someone other than the acting parent, mirror into the
+    // main tasks pipeline so the assignee sees it in their normal task views.
+    let linkedTaskId: string | null = null;
+    if (data.assigneeId && data.assigneeId !== userId) {
+      // Verify the assignee is in this family
+      const { data: member } = await supabase
+        .from("profiles")
+        .select("id")
+        .eq("id", data.assigneeId)
+        .eq("family_id", familyId)
+        .maybeSingle();
+      if (!member) throw new Error("Assignee is not in your family.");
+
+      const today = new Date().toISOString().slice(0, 10);
+      const { data: task, error: tErr } = await supabase
+        .from("tasks")
+        .insert({
+          family_id: familyId,
+          assignee_id: data.assigneeId,
+          created_by: userId,
+          title: data.title,
+          description: data.timeframe ?? null,
+          recurrence_type: "once",
+          recurrence_config: {} as never,
+          start_date: data.dueDate ?? today,
+          end_date: data.dueDate ?? today,
+          reward_amount: 0,
+        })
+        .select("id")
+        .single();
+      if (tErr) throw tErr;
+      linkedTaskId = task.id;
+    }
+
     const { data: row, error } = await supabase
       .from("home_management_tasks")
       .insert({
@@ -84,12 +120,15 @@ export const addHomeTask = createServerFn({ method: "POST" })
         title: data.title,
         timeframe: data.timeframe ?? null,
         due_date: data.dueDate ?? null,
+        assignee_id: data.assigneeId ?? null,
+        linked_task_id: linkedTaskId,
       })
       .select()
       .single();
     if (error) throw error;
     return row;
   });
+
 
 export const toggleHomeTask = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
@@ -111,7 +150,16 @@ export const deleteHomeTask = createServerFn({ method: "POST" })
   .handler(async ({ context, data }) => {
     const { supabase, userId } = context;
     await ensureParentFamily(supabase, userId);
+    const { data: existing } = await supabase
+      .from("home_management_tasks")
+      .select("linked_task_id")
+      .eq("id", data.id)
+      .maybeSingle();
     const { error } = await supabase.from("home_management_tasks").delete().eq("id", data.id);
     if (error) throw error;
+    if (existing?.linked_task_id) {
+      await supabase.from("tasks").delete().eq("id", existing.linked_task_id);
+    }
     return { ok: true };
   });
+
