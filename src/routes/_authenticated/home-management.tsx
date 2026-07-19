@@ -1,7 +1,7 @@
 import { createFileRoute, redirect } from "@tanstack/react-router";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useEffect, useMemo, useState } from "react";
-import { Plus, Trash2, Check, ChevronDown, ChevronUp, User } from "lucide-react";
+import { Plus, Trash2, Check, ChevronDown, ChevronUp, User, Pencil, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -16,6 +16,7 @@ import {
   addHomeTask,
   toggleHomeTask,
   deleteHomeTask,
+  updateHomeTask,
 } from "@/lib/home-management.functions";
 import { toast } from "sonner";
 
@@ -337,6 +338,21 @@ function TaskListEditor({
     onError: (e) => toast.error((e as Error).message),
   });
 
+  const update = useMutation({
+    mutationFn: (v: {
+      id: string;
+      title: string;
+      timeframe: string | null;
+      dueDate: string | null;
+      assigneeId: string | null;
+    }) => updateHomeTask({ data: v }),
+    onSuccess: () => {
+      toast.success("Task updated");
+      onChanged();
+    },
+    onError: (e) => toast.error((e as Error).message),
+  });
+
   const active = tasks.filter((t) => !t.completed);
   const completed = tasks.filter((t) => t.completed);
 
@@ -392,10 +408,26 @@ function TaskListEditor({
           <TabsTrigger value="completed">Completed ({completed.length})</TabsTrigger>
         </TabsList>
         <TabsContent value="active" className="mt-3">
-          <TaskRows rows={active} memberMap={memberMap} onToggle={(id, c) => toggle.mutate({ id, completed: c })} onDelete={(id) => del.mutate(id)} />
+          <TaskRows
+            rows={active}
+            members={members}
+            memberMap={memberMap}
+            meId={meId}
+            onToggle={(id, c) => toggle.mutate({ id, completed: c })}
+            onDelete={(id) => del.mutate(id)}
+            onUpdate={(v) => update.mutate(v)}
+          />
         </TabsContent>
         <TabsContent value="completed" className="mt-3">
-          <TaskRows rows={completed} memberMap={memberMap} onToggle={(id, c) => toggle.mutate({ id, completed: c })} onDelete={(id) => del.mutate(id)} />
+          <TaskRows
+            rows={completed}
+            members={members}
+            memberMap={memberMap}
+            meId={meId}
+            onToggle={(id, c) => toggle.mutate({ id, completed: c })}
+            onDelete={(id) => del.mutate(id)}
+            onUpdate={(v) => update.mutate(v)}
+          />
         </TabsContent>
       </Tabs>
     </div>
@@ -577,17 +609,33 @@ function formatDueDate(d: string) {
 }
 
 
+type UpdatePayload = {
+  id: string;
+  title: string;
+  timeframe: string | null;
+  dueDate: string | null;
+  assigneeId: string | null;
+};
+
 function TaskRows({
   rows,
+  members,
   memberMap,
+  meId,
   onToggle,
   onDelete,
+  onUpdate,
 }: {
   rows: any[];
+  members: FamilyMember[];
   memberMap: Map<string, FamilyMember>;
+  meId: string;
   onToggle: (id: string, completed: boolean) => void;
   onDelete: (id: string) => void;
+  onUpdate: (v: UpdatePayload) => void;
 }) {
+  const [editingId, setEditingId] = useState<string | null>(null);
+
   if (rows.length === 0) {
     return (
       <div className="rounded-xl border border-dashed border-border/60 p-4 text-center text-xs text-muted-foreground">
@@ -599,6 +647,22 @@ function TaskRows({
     <ul className="space-y-2">
       {rows.map((t) => {
         const assignee = t.assignee_id ? memberMap.get(t.assignee_id) : null;
+        if (editingId === t.id) {
+          return (
+            <li key={t.id} className="rounded-xl border border-border/60 bg-background/40 px-3 py-3">
+              <TaskEditRow
+                task={t}
+                members={members}
+                meId={meId}
+                onCancel={() => setEditingId(null)}
+                onSave={(v) => {
+                  onUpdate(v);
+                  setEditingId(null);
+                }}
+              />
+            </li>
+          );
+        }
         return (
           <li
             key={t.id}
@@ -611,9 +675,12 @@ function TaskRows({
             />
             <div className="min-w-0 flex-1">
               <div className={`text-sm ${t.completed ? "line-through text-muted-foreground" : ""}`}>{t.title}</div>
-              <div className="flex items-center gap-3 mt-0.5">
+              <div className="flex items-center gap-3 mt-0.5 flex-wrap">
                 {t.timeframe && (
                   <div className="text-[11px] text-accent font-medium">{t.timeframe}</div>
+                )}
+                {t.due_date && (
+                  <div className="text-[11px] text-accent font-medium">{formatDueDate(t.due_date)}</div>
                 )}
                 {assignee && (
                   <div className="text-[11px] text-muted-foreground flex items-center gap-1">
@@ -624,6 +691,9 @@ function TaskRows({
               </div>
             </div>
             {t.completed && <Check className="h-4 w-4 text-green-500" />}
+            <Button variant="ghost" size="icon" onClick={() => setEditingId(t.id)} aria-label="Edit task">
+              <Pencil className="h-4 w-4" />
+            </Button>
             <Button variant="ghost" size="icon" onClick={() => onDelete(t.id)} aria-label="Delete task">
               <Trash2 className="h-4 w-4 text-destructive" />
             </Button>
@@ -631,6 +701,78 @@ function TaskRows({
         );
       })}
     </ul>
+  );
+}
+
+function TaskEditRow({
+  task,
+  members,
+  meId,
+  onCancel,
+  onSave,
+}: {
+  task: any;
+  members: FamilyMember[];
+  meId: string;
+  onCancel: () => void;
+  onSave: (v: UpdatePayload) => void;
+}) {
+  const [title, setTitle] = useState<string>(task.title ?? "");
+  const [timeframe, setTimeframe] = useState<string>(task.timeframe ?? "");
+  const [dueDate, setDueDate] = useState<string>(task.due_date ?? "");
+  const [assigneeId, setAssigneeId] = useState<string>(task.assignee_id ?? UNASSIGNED);
+
+  return (
+    <div className="flex flex-col sm:flex-row gap-2">
+      <SmartField value={title} onChange={setTitle} placeholder="Task title" className="flex-1" />
+      <SmartField
+        value={timeframe}
+        onChange={setTimeframe}
+        placeholder="Timeframe"
+        className="sm:w-56"
+      />
+      <Input
+        type="date"
+        value={dueDate}
+        onChange={(e) => setDueDate(e.target.value)}
+        className="sm:w-44"
+        aria-label="Due date"
+      />
+      <Select value={assigneeId} onValueChange={setAssigneeId}>
+        <SelectTrigger className="sm:w-48" aria-label="Assign to">
+          <SelectValue placeholder="Assign to…" />
+        </SelectTrigger>
+        <SelectContent>
+          <SelectItem value={UNASSIGNED}>Unassigned (me)</SelectItem>
+          {members.map((m) => (
+            <SelectItem key={m.id} value={m.id}>
+              {(m.display_name || m.email || "Member") + (m.id === meId ? " (me)" : "")}
+            </SelectItem>
+          ))}
+        </SelectContent>
+      </Select>
+      <div className="flex gap-2">
+        <Button
+          onClick={() =>
+            title.trim() &&
+            onSave({
+              id: task.id,
+              title: title.trim(),
+              timeframe: timeframe.trim() || null,
+              dueDate: dueDate || null,
+              assigneeId: assigneeId === UNASSIGNED ? null : assigneeId,
+            })
+          }
+          disabled={!title.trim()}
+          className="bg-gradient-primary text-primary-foreground border-0"
+        >
+          <Check className="h-4 w-4" /> Save
+        </Button>
+        <Button variant="ghost" onClick={onCancel} aria-label="Cancel edit">
+          <X className="h-4 w-4" />
+        </Button>
+      </div>
+    </div>
   );
 }
 
