@@ -408,10 +408,26 @@ function TaskListEditor({
           <TabsTrigger value="completed">Completed ({completed.length})</TabsTrigger>
         </TabsList>
         <TabsContent value="active" className="mt-3">
-          <TaskRows rows={active} memberMap={memberMap} onToggle={(id, c) => toggle.mutate({ id, completed: c })} onDelete={(id) => del.mutate(id)} />
+          <TaskRows
+            rows={active}
+            members={members}
+            memberMap={memberMap}
+            meId={meId}
+            onToggle={(id, c) => toggle.mutate({ id, completed: c })}
+            onDelete={(id) => del.mutate(id)}
+            onUpdate={(v) => update.mutate(v)}
+          />
         </TabsContent>
         <TabsContent value="completed" className="mt-3">
-          <TaskRows rows={completed} memberMap={memberMap} onToggle={(id, c) => toggle.mutate({ id, completed: c })} onDelete={(id) => del.mutate(id)} />
+          <TaskRows
+            rows={completed}
+            members={members}
+            memberMap={memberMap}
+            meId={meId}
+            onToggle={(id, c) => toggle.mutate({ id, completed: c })}
+            onDelete={(id) => del.mutate(id)}
+            onUpdate={(v) => update.mutate(v)}
+          />
         </TabsContent>
       </Tabs>
     </div>
