@@ -65,6 +65,11 @@ export const addHomeTask = createServerFn({ method: "POST" })
         sectionKey: z.string().min(1).max(200),
         title: z.string().trim().min(1).max(300),
         timeframe: z.string().trim().max(100).optional().nullable(),
+        dueDate: z
+          .string()
+          .regex(/^\d{4}-\d{2}-\d{2}$/)
+          .optional()
+          .nullable(),
       })
       .parse(data),
   )
@@ -78,6 +83,7 @@ export const addHomeTask = createServerFn({ method: "POST" })
         section_key: data.sectionKey,
         title: data.title,
         timeframe: data.timeframe ?? null,
+        due_date: data.dueDate ?? null,
       })
       .select()
       .single();

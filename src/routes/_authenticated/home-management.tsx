@@ -1,10 +1,12 @@
 import { createFileRoute, redirect } from "@tanstack/react-router";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useEffect, useMemo, useState } from "react";
-import { Plus, Trash2, Check } from "lucide-react";
+import { Plus, Trash2, Check, ChevronDown, ChevronUp } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { Checkbox } from "@/components/ui/checkbox";
+import { Switch } from "@/components/ui/switch";
+import { Input } from "@/components/ui/input";
 import { SmartField } from "@/components/SmartField";
 import { getMe } from "@/lib/family.functions";
 import {
@@ -111,7 +113,7 @@ function HomeManagementPage() {
   }, [data]);
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 pb-8">
       <div>
         <h1 className="text-3xl font-display font-bold tracking-tight">Fundamentals of Home Management</h1>
         <p className="text-sm text-muted-foreground mt-1">
@@ -122,14 +124,21 @@ function HomeManagementPage() {
         <div className="text-sm text-muted-foreground">Loading…</div>
       ) : (
         <div className="space-y-8">
-          {STRUCTURE.map((node) => (
-            <SectionBlock
-              key={node.title}
-              node={node}
-              visionMap={visionMap}
-              tasksBySection={tasksBySection}
-              onChanged={() => qc.invalidateQueries({ queryKey: ["home-management"] })}
-            />
+          {STRUCTURE.map((node, idx) => (
+            <div key={node.title} className="space-y-6">
+              <SectionBlock
+                node={node}
+                visionMap={visionMap}
+                tasksBySection={tasksBySection}
+                onChanged={() => qc.invalidateQueries({ queryKey: ["home-management"] })}
+              />
+              {idx === 0 && (
+                <ActiveTaskSummary
+                  tasks={data?.tasks ?? []}
+                  onChanged={() => qc.invalidateQueries({ queryKey: ["home-management"] })}
+                />
+              )}
+            </div>
           ))}
         </div>
       )}
@@ -252,13 +261,22 @@ function TaskListEditor({
 }) {
   const [title, setTitle] = useState("");
   const [timeframe, setTimeframe] = useState("");
+  const [dueDate, setDueDate] = useState("");
 
   const add = useMutation({
     mutationFn: () =>
-      addHomeTask({ data: { sectionKey, title: title.trim(), timeframe: timeframe.trim() || null } }),
+      addHomeTask({
+        data: {
+          sectionKey,
+          title: title.trim(),
+          timeframe: timeframe.trim() || null,
+          dueDate: dueDate || null,
+        },
+      }),
     onSuccess: () => {
       setTitle("");
       setTimeframe("");
+      setDueDate("");
       onChanged();
     },
     onError: (e) => toast.error((e as Error).message),
@@ -294,7 +312,14 @@ function TaskListEditor({
           value={timeframe}
           onChange={setTimeframe}
           placeholder="Timeframe (e.g. Weekly)"
-          className="sm:w-64"
+          className="sm:w-56"
+        />
+        <Input
+          type="date"
+          value={dueDate}
+          onChange={(e) => setDueDate(e.target.value)}
+          className="sm:w-44"
+          aria-label="Due date"
         />
         <Button
           onClick={() => title.trim() && add.mutate()}
@@ -319,6 +344,161 @@ function TaskListEditor({
       </Tabs>
     </div>
   );
+}
+
+function ActiveTaskSummary({
+  tasks,
+  onChanged,
+}: {
+  tasks: any[];
+  onChanged: () => void;
+}) {
+  const [showToday, setShowToday] = useState(true);
+  const [showWeek, setShowWeek] = useState(true);
+  const [showLong, setShowLong] = useState(true);
+
+  const toggle = useMutation({
+    mutationFn: (t: { id: string; completed: boolean }) => toggleHomeTask({ data: t }),
+    onSuccess: onChanged,
+    onError: (e) => toast.error((e as Error).message),
+  });
+
+  const { today, thisWeek, longTerm } = useMemo(() => {
+    const now = new Date();
+    const startToday = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+    const endToday = new Date(startToday.getTime() + 24 * 60 * 60 * 1000);
+    const endWeek = new Date(startToday.getTime() + 7 * 24 * 60 * 60 * 1000);
+
+    const today: any[] = [];
+    const thisWeek: any[] = [];
+    const longTerm: any[] = [];
+
+    for (const t of tasks) {
+      if (t.completed) continue;
+      if (!t.due_date) {
+        longTerm.push(t);
+        continue;
+      }
+      // Parse as local date (YYYY-MM-DD)
+      const [y, m, d] = t.due_date.split("-").map(Number);
+      const due = new Date(y, m - 1, d);
+      if (due < endToday) today.push(t);
+      else if (due < endWeek) thisWeek.push(t);
+      else longTerm.push(t);
+    }
+    const sortFn = (a: any, b: any) => (a.due_date ?? "9999").localeCompare(b.due_date ?? "9999");
+    today.sort(sortFn);
+    thisWeek.sort(sortFn);
+    longTerm.sort(sortFn);
+    return { today, thisWeek, longTerm };
+  }, [tasks]);
+
+  const totalActive = today.length + thisWeek.length + longTerm.length;
+
+  return (
+    <div className="rounded-2xl border border-border/60 bg-card p-4 space-y-4">
+      <div className="flex items-center justify-between">
+        <div>
+          <h2 className="text-xl font-display font-semibold">Active tasks</h2>
+          <p className="text-xs text-muted-foreground">
+            {totalActive === 0 ? "No active tasks yet." : `${totalActive} active across the home`}
+          </p>
+        </div>
+      </div>
+
+      <SummaryGroup
+        label="Due today"
+        count={today.length}
+        show={showToday}
+        onToggle={setShowToday}
+        tasks={today}
+        onCheck={(id, c) => toggle.mutate({ id, completed: c })}
+      />
+      <SummaryGroup
+        label="Due this week"
+        count={thisWeek.length}
+        show={showWeek}
+        onToggle={setShowWeek}
+        tasks={thisWeek}
+        onCheck={(id, c) => toggle.mutate({ id, completed: c })}
+      />
+      <SummaryGroup
+        label="Medium to long term"
+        count={longTerm.length}
+        show={showLong}
+        onToggle={setShowLong}
+        tasks={longTerm}
+        onCheck={(id, c) => toggle.mutate({ id, completed: c })}
+      />
+    </div>
+  );
+}
+
+function SummaryGroup({
+  label,
+  count,
+  show,
+  onToggle,
+  tasks,
+  onCheck,
+}: {
+  label: string;
+  count: number;
+  show: boolean;
+  onToggle: (v: boolean) => void;
+  tasks: any[];
+  onCheck: (id: string, completed: boolean) => void;
+}) {
+  return (
+    <div className="rounded-xl border border-border/50 bg-background/40">
+      <div className="flex items-center justify-between px-3 py-2">
+        <div className="flex items-center gap-2">
+          {show ? <ChevronUp className="h-4 w-4 text-muted-foreground" /> : <ChevronDown className="h-4 w-4 text-muted-foreground" />}
+          <span className="text-sm font-medium">{label}</span>
+          <span className="text-xs text-muted-foreground">({count})</span>
+        </div>
+        <Switch checked={show} onCheckedChange={onToggle} aria-label={`Show ${label}`} />
+      </div>
+      {show && (
+        <div className="px-3 pb-3">
+          {tasks.length === 0 ? (
+            <div className="rounded-lg border border-dashed border-border/60 p-3 text-center text-xs text-muted-foreground">
+              Nothing here yet.
+            </div>
+          ) : (
+            <ul className="space-y-1.5">
+              {tasks.map((t) => (
+                <li
+                  key={t.id}
+                  className="flex items-center gap-3 rounded-lg border border-border/40 bg-background/60 px-3 py-2"
+                >
+                  <Checkbox
+                    checked={t.completed}
+                    onCheckedChange={(v) => onCheck(t.id, !!v)}
+                    aria-label="Toggle complete"
+                  />
+                  <div className="min-w-0 flex-1">
+                    <div className="text-sm truncate">{t.title}</div>
+                  </div>
+                  {t.due_date && (
+                    <div className="text-[11px] text-accent font-medium whitespace-nowrap">
+                      {formatDueDate(t.due_date)}
+                    </div>
+                  )}
+                </li>
+              ))}
+            </ul>
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
+
+function formatDueDate(d: string) {
+  const [y, m, day] = d.split("-").map(Number);
+  const dt = new Date(y, m - 1, day);
+  return dt.toLocaleDateString(undefined, { month: "short", day: "numeric" });
 }
 
 function TaskRows({
