@@ -92,6 +92,23 @@ const STRUCTURE: SectionNode[] = [
 
 function HomeManagementPage() {
   const qc = useQueryClient();
+  const [collapsed, setCollapsed] = useState<Set<string>>(new Set());
+
+  const collapseCtx = useMemo(
+    () => ({
+      isCollapsed: (key: string) => collapsed.has(key),
+      toggle: (key: string) => {
+        setCollapsed((prev) => {
+          const next = new Set(prev);
+          if (next.has(key)) next.delete(key);
+          else next.add(key);
+          return next;
+        });
+      },
+    }),
+    [collapsed]
+  );
+
   const { data: me } = useQuery({ queryKey: ["me"], queryFn: () => getMe() });
   const { data, isLoading } = useQuery({
     queryKey: ["home-management"],
