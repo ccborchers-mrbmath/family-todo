@@ -205,6 +205,7 @@ function HomeManagementPage() {
 
 function SectionBlock({
   node,
+  sectionKey,
   visionMap,
   tasksBySection,
   members,
@@ -213,6 +214,7 @@ function SectionBlock({
   onChanged,
 }: {
   node: SectionNode;
+  sectionKey: string;
   visionMap: Map<string, string>;
   tasksBySection: Map<string, any[]>;
   members: FamilyMember[];
@@ -220,54 +222,79 @@ function SectionBlock({
   meId: string;
   onChanged: () => void;
 }) {
+  const { isCollapsed, toggle } = useContext(SectionCollapseContext);
+  const collapsed = isCollapsed(sectionKey);
+
   const headingClass =
     node.level === 2
       ? "text-2xl font-display font-bold tracking-tight"
       : node.level === 3
         ? "text-xl font-display font-semibold"
         : "text-lg font-semibold";
-  const heading =
-    node.level === 2 ? (
-      <h2 className={headingClass}>{node.title}</h2>
-    ) : node.level === 3 ? (
-      <h3 className={headingClass}>{node.title}</h3>
-    ) : (
-      <h4 className={headingClass}>{node.title}</h4>
-    );
+
+  const heading = (
+    <button
+      type="button"
+      onClick={() => toggle(sectionKey)}
+      className="group flex items-center gap-2 text-left hover:opacity-80 transition-opacity"
+      aria-expanded={!collapsed}
+    >
+      {node.level === 2 ? (
+        <h2 className={headingClass}>{node.title}</h2>
+      ) : node.level === 3 ? (
+        <h3 className={headingClass}>{node.title}</h3>
+      ) : (
+        <h4 className={headingClass}>{node.title}</h4>
+      )}
+      {collapsed ? (
+        <ChevronDown className="h-5 w-5 text-muted-foreground opacity-60 group-hover:opacity-100" />
+      ) : (
+        <ChevronUp className="h-5 w-5 text-muted-foreground opacity-60 group-hover:opacity-100" />
+      )}
+    </button>
+  );
 
   return (
     <section className="space-y-4">
       {heading}
-      {node.key && (node.vision || node.tasks) && (
-        <div className="rounded-2xl border border-border/60 bg-card p-4 space-y-4">
-          {node.vision && <VisionEditor sectionKey={node.key} initial={visionMap.get(node.key) ?? ""} onSaved={onChanged} />}
-          {node.tasks && (
-            <TaskListEditor
-              sectionKey={node.key}
-              tasks={tasksBySection.get(node.key) ?? []}
-              members={members}
-              memberMap={memberMap}
-              meId={meId}
-              onChanged={onChanged}
-            />
+      {!collapsed && (
+        <>
+          {node.key && (node.vision || node.tasks) && (
+            <div className="rounded-2xl border border-border/60 bg-card p-4 space-y-4">
+              {node.vision && <VisionEditor sectionKey={node.key} initial={visionMap.get(node.key) ?? ""} onSaved={onChanged} />}
+              {node.tasks && (
+                <TaskListEditor
+                  sectionKey={node.key}
+                  tasks={tasksBySection.get(node.key) ?? []}
+                  members={members}
+                  memberMap={memberMap}
+                  meId={meId}
+                  onChanged={onChanged}
+                />
+              )}
+            </div>
           )}
-        </div>
-      )}
-      {node.children && (
-        <div className={node.level >= 3 ? "pl-4 border-l border-border/40 space-y-6" : "space-y-6"}>
-          {node.children.map((child) => (
-            <SectionBlock
-              key={child.title}
-              node={child}
-              visionMap={visionMap}
-              tasksBySection={tasksBySection}
-              members={members}
-              memberMap={memberMap}
-              meId={meId}
-              onChanged={onChanged}
-            />
-          ))}
-        </div>
+          {node.children && (
+            <div className={node.level >= 3 ? "pl-4 border-l border-border/40 space-y-6" : "space-y-6"}>
+              {node.children.map((child) => {
+                const childKey = child.key ?? `${sectionKey}.${slugify(child.title)}`;
+                return (
+                  <SectionBlock
+                    key={childKey}
+                    node={child}
+                    sectionKey={childKey}
+                    visionMap={visionMap}
+                    tasksBySection={tasksBySection}
+                    members={members}
+                    memberMap={memberMap}
+                    meId={meId}
+                    onChanged={onChanged}
+                  />
+                );
+              })}
+            </div>
+          )}
+        </>
       )}
     </section>
   );
