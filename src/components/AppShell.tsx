@@ -21,6 +21,7 @@ export function AppShell({ children, role, displayName }: Props) {
         { to: "/verify", label: "Verify", icon: ShieldCheck },
         { to: "/accounts", label: "Money", icon: Wallet },
         { to: "/encouragement", label: "Encourage", icon: Heart },
+        { to: "/home-management", label: "Home", icon: Home },
         { to: "/family", label: "Family", icon: Users },
       ]
     : [
