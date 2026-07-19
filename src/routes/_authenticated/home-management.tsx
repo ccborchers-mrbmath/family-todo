@@ -284,17 +284,17 @@ function TaskListEditor({
       <div className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Task list</div>
 
       <div className="flex flex-col sm:flex-row gap-2">
-        <Input
+        <SmartField
           value={title}
-          onChange={(e) => setTitle(e.target.value)}
+          onChange={setTitle}
           placeholder="New task…"
           className="flex-1"
         />
-        <Input
+        <SmartField
           value={timeframe}
-          onChange={(e) => setTimeframe(e.target.value)}
+          onChange={setTimeframe}
           placeholder="Timeframe (e.g. Weekly)"
-          className="sm:w-48"
+          className="sm:w-64"
         />
         <Button
           onClick={() => title.trim() && add.mutate()}
