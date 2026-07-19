@@ -1,5 +1,5 @@
 import { Link, useRouter } from "@tanstack/react-router";
-import { Sparkles, LayoutDashboard, ListChecks, Users, ShieldCheck, LogOut, Wallet, Heart } from "lucide-react";
+import { Sparkles, LayoutDashboard, ListChecks, Users, ShieldCheck, LogOut, Wallet, Heart, Home } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import type { ReactNode } from "react";
@@ -21,6 +21,7 @@ export function AppShell({ children, role, displayName }: Props) {
         { to: "/verify", label: "Verify", icon: ShieldCheck },
         { to: "/accounts", label: "Money", icon: Wallet },
         { to: "/encouragement", label: "Encourage", icon: Heart },
+        { to: "/home-management", label: "Home", icon: Home },
         { to: "/family", label: "Family", icon: Users },
       ]
     : [
