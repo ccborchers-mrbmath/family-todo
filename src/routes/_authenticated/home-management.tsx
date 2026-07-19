@@ -1,6 +1,6 @@
 import { createFileRoute, redirect } from "@tanstack/react-router";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { useEffect, useMemo, useState } from "react";
+import { createContext, useContext, useEffect, useMemo, useState } from "react";
 import { Plus, Trash2, Check, ChevronDown, ChevronUp, User, Pencil, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
@@ -22,6 +22,18 @@ import { toast } from "sonner";
 
 type FamilyMember = { id: string; display_name: string | null; email: string | null; role?: string | null };
 const UNASSIGNED = "__unassigned__";
+
+function slugify(title: string) {
+  return title.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/(^-|-$)/g, "");
+}
+
+const SectionCollapseContext = createContext<{
+  isCollapsed: (key: string) => boolean;
+  toggle: (key: string) => void;
+}>({
+  isCollapsed: () => false,
+  toggle: () => {},
+});
 
 
 export const Route = createFileRoute("/_authenticated/home-management")({
@@ -80,6 +92,23 @@ const STRUCTURE: SectionNode[] = [
 
 function HomeManagementPage() {
   const qc = useQueryClient();
+  const [collapsed, setCollapsed] = useState<Set<string>>(new Set());
+
+  const collapseCtx = useMemo(
+    () => ({
+      isCollapsed: (key: string) => collapsed.has(key),
+      toggle: (key: string) => {
+        setCollapsed((prev) => {
+          const next = new Set(prev);
+          if (next.has(key)) next.delete(key);
+          else next.add(key);
+          return next;
+        });
+      },
+    }),
+    [collapsed]
+  );
+
   const { data: me } = useQuery({ queryKey: ["me"], queryFn: () => getMe() });
   const { data, isLoading } = useQuery({
     queryKey: ["home-management"],
@@ -140,28 +169,34 @@ function HomeManagementPage() {
       {isLoading ? (
         <div className="text-sm text-muted-foreground">Loading…</div>
       ) : (
-        <div className="space-y-8">
-          {STRUCTURE.map((node, idx) => (
-            <div key={node.title} className="space-y-6">
-              <SectionBlock
-                node={node}
-                visionMap={visionMap}
-                tasksBySection={tasksBySection}
-                members={members}
-                memberMap={memberMap}
-                meId={me?.profile?.id ?? ""}
-                onChanged={() => qc.invalidateQueries({ queryKey: ["home-management"] })}
-              />
-              {idx === 0 && (
-                <ActiveTaskSummary
-                  tasks={data?.tasks ?? []}
-                  memberMap={memberMap}
-                  onChanged={() => qc.invalidateQueries({ queryKey: ["home-management"] })}
-                />
-              )}
-            </div>
-          ))}
-        </div>
+        <SectionCollapseContext.Provider value={collapseCtx}>
+          <div className="space-y-8">
+            {STRUCTURE.map((node, idx) => {
+              const key = node.key ?? slugify(node.title);
+              return (
+                <div key={key} className="space-y-6">
+                  <SectionBlock
+                    node={node}
+                    sectionKey={key}
+                    visionMap={visionMap}
+                    tasksBySection={tasksBySection}
+                    members={members}
+                    memberMap={memberMap}
+                    meId={me?.profile?.id ?? ""}
+                    onChanged={() => qc.invalidateQueries({ queryKey: ["home-management"] })}
+                  />
+                  {idx === 0 && !collapseCtx.isCollapsed(key) && (
+                    <ActiveTaskSummary
+                      tasks={data?.tasks ?? []}
+                      memberMap={memberMap}
+                      onChanged={() => qc.invalidateQueries({ queryKey: ["home-management"] })}
+                    />
+                  )}
+                </div>
+              );
+            })}
+          </div>
+        </SectionCollapseContext.Provider>
       )}
     </div>
   );
@@ -170,6 +205,7 @@ function HomeManagementPage() {
 
 function SectionBlock({
   node,
+  sectionKey,
   visionMap,
   tasksBySection,
   members,
@@ -178,6 +214,7 @@ function SectionBlock({
   onChanged,
 }: {
   node: SectionNode;
+  sectionKey: string;
   visionMap: Map<string, string>;
   tasksBySection: Map<string, any[]>;
   members: FamilyMember[];
@@ -185,54 +222,79 @@ function SectionBlock({
   meId: string;
   onChanged: () => void;
 }) {
+  const { isCollapsed, toggle } = useContext(SectionCollapseContext);
+  const collapsed = isCollapsed(sectionKey);
+
   const headingClass =
     node.level === 2
       ? "text-2xl font-display font-bold tracking-tight"
       : node.level === 3
         ? "text-xl font-display font-semibold"
         : "text-lg font-semibold";
-  const heading =
-    node.level === 2 ? (
-      <h2 className={headingClass}>{node.title}</h2>
-    ) : node.level === 3 ? (
-      <h3 className={headingClass}>{node.title}</h3>
-    ) : (
-      <h4 className={headingClass}>{node.title}</h4>
-    );
+
+  const heading = (
+    <button
+      type="button"
+      onClick={() => toggle(sectionKey)}
+      className="group flex items-center gap-2 text-left hover:opacity-80 transition-opacity"
+      aria-expanded={!collapsed}
+    >
+      {node.level === 2 ? (
+        <h2 className={headingClass}>{node.title}</h2>
+      ) : node.level === 3 ? (
+        <h3 className={headingClass}>{node.title}</h3>
+      ) : (
+        <h4 className={headingClass}>{node.title}</h4>
+      )}
+      {collapsed ? (
+        <ChevronDown className="h-5 w-5 text-muted-foreground opacity-60 group-hover:opacity-100" />
+      ) : (
+        <ChevronUp className="h-5 w-5 text-muted-foreground opacity-60 group-hover:opacity-100" />
+      )}
+    </button>
+  );
 
   return (
     <section className="space-y-4">
       {heading}
-      {node.key && (node.vision || node.tasks) && (
-        <div className="rounded-2xl border border-border/60 bg-card p-4 space-y-4">
-          {node.vision && <VisionEditor sectionKey={node.key} initial={visionMap.get(node.key) ?? ""} onSaved={onChanged} />}
-          {node.tasks && (
-            <TaskListEditor
-              sectionKey={node.key}
-              tasks={tasksBySection.get(node.key) ?? []}
-              members={members}
-              memberMap={memberMap}
-              meId={meId}
-              onChanged={onChanged}
-            />
+      {!collapsed && (
+        <>
+          {node.key && (node.vision || node.tasks) && (
+            <div className="rounded-2xl border border-border/60 bg-card p-4 space-y-4">
+              {node.vision && <VisionEditor sectionKey={node.key} initial={visionMap.get(node.key) ?? ""} onSaved={onChanged} />}
+              {node.tasks && (
+                <TaskListEditor
+                  sectionKey={node.key}
+                  tasks={tasksBySection.get(node.key) ?? []}
+                  members={members}
+                  memberMap={memberMap}
+                  meId={meId}
+                  onChanged={onChanged}
+                />
+              )}
+            </div>
           )}
-        </div>
-      )}
-      {node.children && (
-        <div className={node.level >= 3 ? "pl-4 border-l border-border/40 space-y-6" : "space-y-6"}>
-          {node.children.map((child) => (
-            <SectionBlock
-              key={child.title}
-              node={child}
-              visionMap={visionMap}
-              tasksBySection={tasksBySection}
-              members={members}
-              memberMap={memberMap}
-              meId={meId}
-              onChanged={onChanged}
-            />
-          ))}
-        </div>
+          {node.children && (
+            <div className={node.level >= 3 ? "pl-4 border-l border-border/40 space-y-6" : "space-y-6"}>
+              {node.children.map((child) => {
+                const childKey = child.key ?? `${sectionKey}.${slugify(child.title)}`;
+                return (
+                  <SectionBlock
+                    key={childKey}
+                    node={child}
+                    sectionKey={childKey}
+                    visionMap={visionMap}
+                    tasksBySection={tasksBySection}
+                    members={members}
+                    memberMap={memberMap}
+                    meId={meId}
+                    onChanged={onChanged}
+                  />
+                );
+              })}
+            </div>
+          )}
+        </>
       )}
     </section>
   );
