@@ -579,10 +579,12 @@ function formatDueDate(d: string) {
 
 function TaskRows({
   rows,
+  memberMap,
   onToggle,
   onDelete,
 }: {
   rows: any[];
+  memberMap: Map<string, FamilyMember>;
   onToggle: (id: string, completed: boolean) => void;
   onDelete: (id: string) => void;
 }) {
@@ -595,28 +597,40 @@ function TaskRows({
   }
   return (
     <ul className="space-y-2">
-      {rows.map((t) => (
-        <li
-          key={t.id}
-          className="flex items-center gap-3 rounded-xl border border-border/60 bg-background/40 px-3 py-2"
-        >
-          <Checkbox
-            checked={t.completed}
-            onCheckedChange={(v) => onToggle(t.id, !!v)}
-            aria-label="Toggle complete"
-          />
-          <div className="min-w-0 flex-1">
-            <div className={`text-sm ${t.completed ? "line-through text-muted-foreground" : ""}`}>{t.title}</div>
-            {t.timeframe && (
-              <div className="text-[11px] text-accent font-medium mt-0.5">{t.timeframe}</div>
-            )}
-          </div>
-          {t.completed && <Check className="h-4 w-4 text-green-500" />}
-          <Button variant="ghost" size="icon" onClick={() => onDelete(t.id)} aria-label="Delete task">
-            <Trash2 className="h-4 w-4 text-destructive" />
-          </Button>
-        </li>
-      ))}
+      {rows.map((t) => {
+        const assignee = t.assignee_id ? memberMap.get(t.assignee_id) : null;
+        return (
+          <li
+            key={t.id}
+            className="flex items-center gap-3 rounded-xl border border-border/60 bg-background/40 px-3 py-2"
+          >
+            <Checkbox
+              checked={t.completed}
+              onCheckedChange={(v) => onToggle(t.id, !!v)}
+              aria-label="Toggle complete"
+            />
+            <div className="min-w-0 flex-1">
+              <div className={`text-sm ${t.completed ? "line-through text-muted-foreground" : ""}`}>{t.title}</div>
+              <div className="flex items-center gap-3 mt-0.5">
+                {t.timeframe && (
+                  <div className="text-[11px] text-accent font-medium">{t.timeframe}</div>
+                )}
+                {assignee && (
+                  <div className="text-[11px] text-muted-foreground flex items-center gap-1">
+                    <User className="h-3 w-3" />
+                    {assignee.display_name || assignee.email}
+                  </div>
+                )}
+              </div>
+            </div>
+            {t.completed && <Check className="h-4 w-4 text-green-500" />}
+            <Button variant="ghost" size="icon" onClick={() => onDelete(t.id)} aria-label="Delete task">
+              <Trash2 className="h-4 w-4 text-destructive" />
+            </Button>
+          </li>
+        );
+      })}
     </ul>
   );
 }
+
