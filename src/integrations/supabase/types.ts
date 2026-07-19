@@ -188,6 +188,7 @@ export type Database = {
       }
       home_management_tasks: {
         Row: {
+          assignee_id: string | null
           completed: boolean
           completed_at: string | null
           created_at: string
@@ -200,6 +201,7 @@ export type Database = {
           updated_at: string
         }
         Insert: {
+          assignee_id?: string | null
           completed?: boolean
           completed_at?: string | null
           created_at?: string
@@ -212,6 +214,7 @@ export type Database = {
           updated_at?: string
         }
         Update: {
+          assignee_id?: string | null
           completed?: boolean
           completed_at?: string | null
           created_at?: string
@@ -224,6 +227,13 @@ export type Database = {
           updated_at?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "home_management_tasks_assignee_id_fkey"
+            columns: ["assignee_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "home_management_tasks_family_id_fkey"
             columns: ["family_id"]
