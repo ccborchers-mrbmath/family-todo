@@ -113,7 +113,7 @@ function HomeManagementPage() {
   }, [data]);
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 pb-8">
       <div>
         <h1 className="text-3xl font-display font-bold tracking-tight">Fundamentals of Home Management</h1>
         <p className="text-sm text-muted-foreground mt-1">
@@ -124,14 +124,21 @@ function HomeManagementPage() {
         <div className="text-sm text-muted-foreground">Loading…</div>
       ) : (
         <div className="space-y-8">
-          {STRUCTURE.map((node) => (
-            <SectionBlock
-              key={node.title}
-              node={node}
-              visionMap={visionMap}
-              tasksBySection={tasksBySection}
-              onChanged={() => qc.invalidateQueries({ queryKey: ["home-management"] })}
-            />
+          {STRUCTURE.map((node, idx) => (
+            <div key={node.title} className="space-y-6">
+              <SectionBlock
+                node={node}
+                visionMap={visionMap}
+                tasksBySection={tasksBySection}
+                onChanged={() => qc.invalidateQueries({ queryKey: ["home-management"] })}
+              />
+              {idx === 0 && (
+                <ActiveTaskSummary
+                  tasks={data?.tasks ?? []}
+                  onChanged={() => qc.invalidateQueries({ queryKey: ["home-management"] })}
+                />
+              )}
+            </div>
           ))}
         </div>
       )}
