@@ -191,6 +191,7 @@ export type Database = {
           completed: boolean
           completed_at: string | null
           created_at: string
+          due_date: string | null
           family_id: string
           id: string
           section_key: string
@@ -202,6 +203,7 @@ export type Database = {
           completed?: boolean
           completed_at?: string | null
           created_at?: string
+          due_date?: string | null
           family_id: string
           id?: string
           section_key: string
@@ -213,6 +215,7 @@ export type Database = {
           completed?: boolean
           completed_at?: string | null
           created_at?: string
+          due_date?: string | null
           family_id?: string
           id?: string
           section_key?: string

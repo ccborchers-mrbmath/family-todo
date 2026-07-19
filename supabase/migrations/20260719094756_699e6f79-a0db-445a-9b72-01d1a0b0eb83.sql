@@ -1,0 +1,1 @@
+ALTER TABLE public.home_management_tasks ADD COLUMN IF NOT EXISTS due_date date;
