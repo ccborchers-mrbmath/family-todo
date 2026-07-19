@@ -23,6 +23,18 @@ import { toast } from "sonner";
 type FamilyMember = { id: string; display_name: string | null; email: string | null; role?: string | null };
 const UNASSIGNED = "__unassigned__";
 
+function slugify(title: string) {
+  return title.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/(^-|-$)/g, "");
+}
+
+const SectionCollapseContext = createContext<{
+  isCollapsed: (key: string) => boolean;
+  toggle: (key: string) => void;
+}>({
+  isCollapsed: () => false,
+  toggle: () => {},
+});
+
 
 export const Route = createFileRoute("/_authenticated/home-management")({
   head: () => ({ meta: [{ title: "Home Management · Kinquest" }] }),
