@@ -195,6 +195,7 @@ export type Database = {
           due_date: string | null
           family_id: string
           id: string
+          linked_task_id: string | null
           section_key: string
           timeframe: string | null
           title: string
@@ -208,6 +209,7 @@ export type Database = {
           due_date?: string | null
           family_id: string
           id?: string
+          linked_task_id?: string | null
           section_key: string
           timeframe?: string | null
           title: string
@@ -221,6 +223,7 @@ export type Database = {
           due_date?: string | null
           family_id?: string
           id?: string
+          linked_task_id?: string | null
           section_key?: string
           timeframe?: string | null
           title?: string
@@ -239,6 +242,13 @@ export type Database = {
             columns: ["family_id"]
             isOneToOne: false
             referencedRelation: "families"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "home_management_tasks_linked_task_id_fkey"
+            columns: ["linked_task_id"]
+            isOneToOne: false
+            referencedRelation: "tasks"
             referencedColumns: ["id"]
           },
         ]
