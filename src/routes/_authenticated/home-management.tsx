@@ -504,6 +504,7 @@ function SummaryGroup({
   show,
   onToggle,
   tasks,
+  memberMap,
   onCheck,
 }: {
   label: string;
@@ -511,6 +512,7 @@ function SummaryGroup({
   show: boolean;
   onToggle: (v: boolean) => void;
   tasks: any[];
+  memberMap: Map<string, FamilyMember>;
   onCheck: (id: string, completed: boolean) => void;
 }) {
   return (
@@ -531,26 +533,35 @@ function SummaryGroup({
             </div>
           ) : (
             <ul className="space-y-1.5">
-              {tasks.map((t) => (
-                <li
-                  key={t.id}
-                  className="flex items-center gap-3 rounded-lg border border-border/40 bg-background/60 px-3 py-2"
-                >
-                  <Checkbox
-                    checked={t.completed}
-                    onCheckedChange={(v) => onCheck(t.id, !!v)}
-                    aria-label="Toggle complete"
-                  />
-                  <div className="min-w-0 flex-1">
-                    <div className="text-sm truncate">{t.title}</div>
-                  </div>
-                  {t.due_date && (
-                    <div className="text-[11px] text-accent font-medium whitespace-nowrap">
-                      {formatDueDate(t.due_date)}
+              {tasks.map((t) => {
+                const assignee = t.assignee_id ? memberMap.get(t.assignee_id) : null;
+                return (
+                  <li
+                    key={t.id}
+                    className="flex items-center gap-3 rounded-lg border border-border/40 bg-background/60 px-3 py-2"
+                  >
+                    <Checkbox
+                      checked={t.completed}
+                      onCheckedChange={(v) => onCheck(t.id, !!v)}
+                      aria-label="Toggle complete"
+                    />
+                    <div className="min-w-0 flex-1">
+                      <div className="text-sm truncate">{t.title}</div>
+                      {assignee && (
+                        <div className="text-[11px] text-muted-foreground flex items-center gap-1 mt-0.5">
+                          <User className="h-3 w-3" />
+                          {assignee.display_name || assignee.email}
+                        </div>
+                      )}
                     </div>
-                  )}
-                </li>
-              ))}
+                    {t.due_date && (
+                      <div className="text-[11px] text-accent font-medium whitespace-nowrap">
+                        {formatDueDate(t.due_date)}
+                      </div>
+                    )}
+                  </li>
+                );
+              })}
             </ul>
           )}
         </div>
@@ -564,6 +575,7 @@ function formatDueDate(d: string) {
   const dt = new Date(y, m - 1, day);
   return dt.toLocaleDateString(undefined, { month: "short", day: "numeric" });
 }
+
 
 function TaskRows({
   rows,
