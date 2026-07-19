@@ -85,10 +85,14 @@ function HomeManagementPage() {
     queryFn: () => listHomeManagement(),
     enabled: me?.role === "parent",
   });
+  const { data: family } = useQuery({
+    queryKey: ["family"],
+    queryFn: () => listFamilyData(),
+    enabled: me?.role === "parent",
+  });
 
   useEffect(() => {
     if (me && me.role !== "parent") {
-      // Kids should never see this page
       throw redirect({ to: "/dashboard" });
     }
   }, [me]);
@@ -100,6 +104,13 @@ function HomeManagementPage() {
       </div>
     );
   }
+
+  const members: FamilyMember[] = (family?.members ?? []) as FamilyMember[];
+  const memberMap = useMemo(() => {
+    const m = new Map<string, FamilyMember>();
+    for (const mem of members) m.set(mem.id, mem);
+    return m;
+  }, [members]);
 
   const visionMap = useMemo(() => {
     const m = new Map<string, string>();
@@ -135,11 +146,15 @@ function HomeManagementPage() {
                 node={node}
                 visionMap={visionMap}
                 tasksBySection={tasksBySection}
+                members={members}
+                memberMap={memberMap}
+                meId={me?.profile?.id ?? ""}
                 onChanged={() => qc.invalidateQueries({ queryKey: ["home-management"] })}
               />
               {idx === 0 && (
                 <ActiveTaskSummary
                   tasks={data?.tasks ?? []}
+                  memberMap={memberMap}
                   onChanged={() => qc.invalidateQueries({ queryKey: ["home-management"] })}
                 />
               )}
@@ -150,6 +165,7 @@ function HomeManagementPage() {
     </div>
   );
 }
+
 
 function SectionBlock({
   node,
