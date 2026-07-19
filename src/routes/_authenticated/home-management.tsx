@@ -132,7 +132,7 @@ function HomeManagementPage() {
   return (
     <div className="space-y-6 pb-8">
       <div>
-        <h1 className="text-3xl font-display font-bold tracking-tight">Fundamentals of Home Management</h1>
+        <h1 className="text-3xl font-display font-bold tracking-tight">Home Management</h1>
         <p className="text-sm text-muted-foreground mt-1">
           Set your vision and manage the ongoing tasks that keep the home running.
         </p>
