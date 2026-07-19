@@ -1,0 +1,1 @@
+REVOKE EXECUTE ON FUNCTION public.sync_home_task_from_instance() FROM PUBLIC, anon, authenticated;
