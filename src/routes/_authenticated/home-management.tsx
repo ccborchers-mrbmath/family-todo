@@ -3,10 +3,9 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useEffect, useMemo, useState } from "react";
 import { Plus, Trash2, Check } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Textarea } from "@/components/ui/textarea";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { Checkbox } from "@/components/ui/checkbox";
+import { SmartField } from "@/components/SmartField";
 import { getMe } from "@/lib/family.functions";
 import {
   listHomeManagement,
@@ -222,13 +221,13 @@ function VisionEditor({
   return (
     <div className="space-y-2">
       <div className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Vision</div>
-      <Textarea
+      <SmartField
+        as="textarea"
         value={value}
-        onChange={(e) => setValue(e.target.value)}
+        onChange={setValue}
         onBlur={() => value !== initial && save.mutate()}
         placeholder="Describe the vision for this area…"
         rows={3}
-        className="resize-y"
       />
       <div className="flex items-center justify-between text-xs text-muted-foreground">
         <span>{saved ? "Saved" : "Auto-saves when you click away"}</span>
@@ -285,17 +284,17 @@ function TaskListEditor({
       <div className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Task list</div>
 
       <div className="flex flex-col sm:flex-row gap-2">
-        <Input
+        <SmartField
           value={title}
-          onChange={(e) => setTitle(e.target.value)}
+          onChange={setTitle}
           placeholder="New task…"
           className="flex-1"
         />
-        <Input
+        <SmartField
           value={timeframe}
-          onChange={(e) => setTimeframe(e.target.value)}
+          onChange={setTimeframe}
           placeholder="Timeframe (e.g. Weekly)"
-          className="sm:w-48"
+          className="sm:w-64"
         />
         <Button
           onClick={() => title.trim() && add.mutate()}
