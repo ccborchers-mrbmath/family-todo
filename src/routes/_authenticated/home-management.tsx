@@ -171,11 +171,17 @@ function SectionBlock({
   node,
   visionMap,
   tasksBySection,
+  members,
+  memberMap,
+  meId,
   onChanged,
 }: {
   node: SectionNode;
   visionMap: Map<string, string>;
   tasksBySection: Map<string, any[]>;
+  members: FamilyMember[];
+  memberMap: Map<string, FamilyMember>;
+  meId: string;
   onChanged: () => void;
 }) {
   const headingClass =
@@ -203,6 +209,9 @@ function SectionBlock({
             <TaskListEditor
               sectionKey={node.key}
               tasks={tasksBySection.get(node.key) ?? []}
+              members={members}
+              memberMap={memberMap}
+              meId={meId}
               onChanged={onChanged}
             />
           )}
@@ -216,6 +225,9 @@ function SectionBlock({
               node={child}
               visionMap={visionMap}
               tasksBySection={tasksBySection}
+              members={members}
+              memberMap={memberMap}
+              meId={meId}
               onChanged={onChanged}
             />
           ))}
@@ -224,6 +236,7 @@ function SectionBlock({
     </section>
   );
 }
+
 
 function VisionEditor({
   sectionKey,
