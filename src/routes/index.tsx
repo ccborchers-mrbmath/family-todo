@@ -26,7 +26,17 @@ export const Route = createFileRoute("/")({
 });
 
 function Landing() {
+  const router = useRouter();
+
+  useEffect(() => {
+    if (!getRememberMe()) return;
+    supabase.auth.getSession().then(({ data }) => {
+      if (data.session) router.navigate({ to: "/dashboard", replace: true });
+    });
+  }, [router]);
+
   return (
+
     <div className="min-h-screen">
       <header className="mx-auto flex max-w-6xl items-center justify-between px-4 py-5">
         <div className="flex items-center gap-2">
