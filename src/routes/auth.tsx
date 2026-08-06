@@ -75,14 +75,29 @@ function AuthPage() {
         <p className="mt-2 text-sm text-muted-foreground text-center">
           Use the Google account your parent invited (or your own to start a family).
         </p>
+        <div className="mt-6 flex items-center justify-center gap-2">
+          <Checkbox
+            id="remember"
+            checked={remember}
+            onCheckedChange={(v) => {
+              const next = v === true;
+              setRemember(next);
+              setRememberMe(next);
+            }}
+          />
+          <Label htmlFor="remember" className="text-sm text-muted-foreground cursor-pointer">
+            Keep me signed in on this device
+          </Label>
+        </div>
         <Button
           onClick={signInGoogle}
           disabled={loading}
-          className="mt-8 w-full bg-gradient-primary text-primary-foreground border-0 shadow-pop hover:opacity-90"
+          className="mt-4 w-full bg-gradient-primary text-primary-foreground border-0 shadow-pop hover:opacity-90"
           size="lg"
         >
           {loading ? "Opening Google…" : "Continue with Google"}
         </Button>
+
 
         <div className="mt-6 text-center">
           <button
