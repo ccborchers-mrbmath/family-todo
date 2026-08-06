@@ -1,6 +1,10 @@
-import { createFileRoute, Link } from "@tanstack/react-router";
+import { createFileRoute, Link, useRouter } from "@tanstack/react-router";
+import { useEffect } from "react";
 import { Sparkles, CheckCircle2, ShieldCheck, Repeat } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { supabase } from "@/integrations/supabase/client";
+import { getRememberMe } from "@/lib/remember-me";
+
 
 export const Route = createFileRoute("/")({
   head: () => ({
