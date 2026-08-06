@@ -1,6 +1,10 @@
-import { createFileRoute, Link } from "@tanstack/react-router";
+import { createFileRoute, Link, useRouter } from "@tanstack/react-router";
+import { useEffect } from "react";
 import { Sparkles, CheckCircle2, ShieldCheck, Repeat } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { supabase } from "@/integrations/supabase/client";
+import { getRememberMe } from "@/lib/remember-me";
+
 
 export const Route = createFileRoute("/")({
   head: () => ({
@@ -22,7 +26,17 @@ export const Route = createFileRoute("/")({
 });
 
 function Landing() {
+  const router = useRouter();
+
+  useEffect(() => {
+    if (!getRememberMe()) return;
+    supabase.auth.getSession().then(({ data }) => {
+      if (data.session) router.navigate({ to: "/dashboard", replace: true });
+    });
+  }, [router]);
+
   return (
+
     <div className="min-h-screen">
       <header className="mx-auto flex max-w-6xl items-center justify-between px-4 py-5">
         <div className="flex items-center gap-2">
