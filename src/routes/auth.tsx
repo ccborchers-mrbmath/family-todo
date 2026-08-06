@@ -4,8 +4,10 @@ import { Sparkles } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Checkbox } from "@/components/ui/checkbox";
 import { lovable } from "@/integrations/lovable";
 import { supabase } from "@/integrations/supabase/client";
+import { getRememberMe, setRememberMe } from "@/lib/remember-me";
 import { toast } from "sonner";
 
 export const Route = createFileRoute("/auth")({
@@ -22,8 +24,10 @@ function AuthPage() {
   const [showEmail, setShowEmail] = useState(false);
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [remember, setRemember] = useState(true);
 
   useEffect(() => {
+    setRemember(getRememberMe());
     supabase.auth.getSession().then(({ data }) => {
       if (data.session) router.navigate({ to: "/dashboard", replace: true });
     });
@@ -31,6 +35,7 @@ function AuthPage() {
 
   async function signInGoogle() {
     setLoading(true);
+    setRememberMe(remember);
     const result = await lovable.auth.signInWithOAuth("google", {
       redirect_uri: window.location.origin + "/dashboard",
     });
@@ -46,6 +51,7 @@ function AuthPage() {
   async function signInEmail(e: React.FormEvent) {
     e.preventDefault();
     setLoading(true);
+    setRememberMe(remember);
     const { error } = await supabase.auth.signInWithPassword({ email, password });
     if (error) {
       toast.error(error.message);
@@ -54,6 +60,7 @@ function AuthPage() {
     }
     router.navigate({ to: "/dashboard", replace: true });
   }
+
 
   return (
     <div className="min-h-screen grid place-items-center px-4">
