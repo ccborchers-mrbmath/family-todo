@@ -19,6 +19,7 @@ import {
   updateHomeTask,
 } from "@/lib/home-management.functions";
 import { toast } from "sonner";
+import { FamilyValuesView } from "@/components/FamilyValuesEditor";
 
 type FamilyMember = { id: string; display_name: string | null; email: string | null; role?: string | null };
 const UNASSIGNED = "__unassigned__";
@@ -93,6 +94,7 @@ const STRUCTURE: SectionNode[] = [
 function HomeManagementPage() {
   const qc = useQueryClient();
   const [collapsed, setCollapsed] = useState<Set<string>>(new Set());
+  const [view, setView] = useState<"home" | "values">("home");
 
   const collapseCtx = useMemo(
     () => ({
@@ -161,12 +163,28 @@ function HomeManagementPage() {
   return (
     <div className="space-y-6 pb-8">
       <div>
-        <h1 className="text-3xl font-display font-bold tracking-tight">Home Management</h1>
+        <div className="inline-flex rounded-xl border border-border/60 bg-secondary/40 p-1 mb-4">
+          {(["home", "values"] as const).map((v) => (
+            <button
+              key={v}
+              type="button"
+              onClick={() => setView(v)}
+              className={`rounded-lg px-4 py-1.5 text-sm font-medium transition-colors ${view === v ? "bg-background text-foreground shadow" : "text-muted-foreground hover:text-foreground"}`}
+            >
+              {v === "home" ? "Home Management" : "Family Values"}
+            </button>
+          ))}
+        </div>
+        <h1 className="text-3xl font-display font-bold tracking-tight">{view === "home" ? "Home Management" : "Family Values"}</h1>
         <p className="text-sm text-muted-foreground mt-1">
-          Set your vision and manage the ongoing tasks that keep the home running.
+          {view === "home"
+            ? "Set your vision and manage the ongoing tasks that keep the home running."
+            : "Write your family's values and house rules. Your kids can read them from their Values tab."}
         </p>
       </div>
-      {isLoading ? (
+      {view === "values" ? (
+        <FamilyValuesView editable />
+      ) : isLoading ? (
         <div className="text-sm text-muted-foreground">Loading…</div>
       ) : (
         <SectionCollapseContext.Provider value={collapseCtx}>
