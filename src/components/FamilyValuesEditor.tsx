@@ -110,7 +110,7 @@ export function FamilyValuesView({ editable }: { editable: boolean }) {
   return (
     <div className="rounded-2xl border border-border/60 bg-card/60">
       {editable && <Toolbar editor={editor} />}
-      <div className="p-5">
+      <div className="p-5 relative">
         {editable && editor.isEmpty && (
           <p className="pointer-events-none absolute text-muted-foreground text-sm">Start typing your family values and house rules…</p>
         )}
